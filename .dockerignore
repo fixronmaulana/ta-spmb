@@ -1,0 +1,29 @@
+# Jangan ikut-sertakan folder vendor (akan di-install ulang oleh composer)
+vendor/
+
+# Jangan kirim file environment (nanti diset manual di Coolify)
+.env
+
+# Folder writable tidak perlu dikirim
+writable/logs/*
+writable/cache/*
+writable/session/*
+writable/debugbar/*
+
+# File testing tidak perlu
+tests/
+phpunit.xml.dist
+phpunit
+
+# File IDE / editor
+.idea/
+.vscode/
+*.sublime-workspace
+
+# File OS
+.DS_Store
+Thumbs.db
+
+# File Git
+.git/
+.gitignore
