@@ -128,9 +128,10 @@
 
             <div class="flex items-center justify-center w-full p-12 relative">
                 <div class="text-center">
-                    <div class="w-32 h-32 rounded-full flex items-center justify-center text-5xl font-bold font-serif mx-auto mb-6"
-                        style="background: hsl(43,70%,47%,0.15); color: hsl(43,70%,57%); border: 3px solid hsl(43,70%,47%,0.3);">
-                        M
+                    <div class="w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-6"
+                        style="background: hsl(43,70%,47%,0.15); border: 3px solid hsl(43,70%,47%,0.3);">
+                        <img src="<?= base_url('assets/logo/logo-smk.png') ?>" alt="Logo SMK Al-Munawwir IIBS"
+                            class="w-24 h-24 rounded-full object-cover">
                     </div>
                     <h2 class="text-3xl font-bold font-serif mb-4" style="color: hsl(45,70%,95%);">
                         SPMB 2026/2027
@@ -164,8 +165,9 @@
 
                 <!-- Header (logo visible only on mobile) -->
                 <div class="flex items-center gap-3 mb-8">
-                    <div class="w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-bold font-serif flex-shrink-0 lg:hidden"
-                        style="background: hsl(220,54%,20%);">M</div>
+                    <img src="<?= base_url('assets/logo/logo-smk.png') ?>" alt="Logo SMK Al-Munawwir IIBS"
+                        class="w-12 h-12 rounded-full flex-shrink-0 object-cover lg:hidden"
+                        style="background: hsl(220,54%,20%);">
                     <div>
                         <h1 class="text-2xl font-bold font-serif">REGISTRASI AKUN</h1>
                         <p class="text-sm" style="color: hsl(220,15%,45%);">Buat akun baru untuk pendaftaran SPMB</p>
@@ -327,7 +329,7 @@
                                 :type="showPassword ? 'text' : 'password'"
                                 id="password"
                                 name="password"
-                                placeholder="••••••••••••"
+                                placeholder="Masukkan password baru Anda"
                                 class="form-input has-right"
                                 :class="{ 'has-error': clientErrors.password, 'has-success': form.password && !clientErrors.password }"
                                 x-model="form.password"
@@ -387,7 +389,7 @@
                                 :type="showConfirm ? 'text' : 'password'"
                                 id="confirmPassword"
                                 name="password_confirm"
-                                placeholder="••••••••••••"
+                                placeholder="Konfirmasi password"
                                 class="form-input has-right"
                                 :class="{ 'has-error': clientErrors.confirmPassword, 'has-success': form.confirmPassword && !clientErrors.confirmPassword && form.password === form.confirmPassword }"
                                 x-model="form.confirmPassword"
@@ -468,21 +470,17 @@
 
                     <!-- Submit Button -->
                     <button
+                        id="registerBtn"
                         type="submit"
                         class="w-full flex items-center justify-center gap-2 py-3 px-6 font-semibold text-white rounded-xl transition-all text-sm mt-6"
                         style="background: hsl(220,54%,20%);"
-                        :style="submitting ? 'opacity:0.7; cursor:not-allowed;' : ''"
                         onmouseover="if(!this.disabled) this.style.background='hsl(220,54%,30%)'"
-                        onmouseout="this.style.background='hsl(220,54%,20%)'"
-                        :disabled="submitting">
-                        <template x-if="submitting">
-                            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                        </template>
-                        <template x-if="submitting"><span>Memproses...</span></template>
-                        <template x-if="!submitting"><span>Daftar</span></template>
+                        onmouseout="if(!this.disabled) this.style.background='hsl(220,54%,20%)'">
+                        <svg id="registerSpinner" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" style="display:none;">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <span id="registerBtnText">Daftar</span>
                     </button>
                 </form>
 
@@ -588,12 +586,24 @@
 
                     // Validasi client-side terlebih dahulu
                     if (!this.validate()) {
-                        this.submitting = false;
                         return;
                     }
 
-                    // Set submitting state
-                    this.submitting = true;
+                    // Set submitting state via plain JS (tidak bergantung Alpine rendering)
+                    const btn = document.getElementById('registerBtn');
+                    const spinner = document.getElementById('registerSpinner');
+                    const btnText = document.getElementById('registerBtnText');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.style.opacity = '0.7';
+                        btn.style.cursor = 'not-allowed';
+                    }
+                    if (spinner) {
+                        spinner.style.display = 'inline-block';
+                    }
+                    if (btnText) {
+                        btnText.textContent = 'Memproses...';
+                    }
 
                     // Submit form secara native
                     const form = document.getElementById('registerForm');

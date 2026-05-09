@@ -215,7 +215,7 @@
 
                 <!-- Logo -->
                 <a href="<?= base_url('/') ?>" class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-xl font-bold font-serif flex-shrink-0" style="background: hsl(220,54%,20%);">M</div>
+                    <img src="<?= base_url('assets/logo/logo-smk.png') ?>" alt="Logo SMK Al-Munawwir IIBS" class="w-10 h-10 rounded-full flex-shrink-0 object-cover" style="background: hsl(220,54%,20%);">
                     <div class="hidden sm:block">
                         <p class="text-sm font-bold" style="color: hsl(220,54%,20%);">SMK Al-Munawwir</p>
                         <p class="text-xs" style="color: hsl(220,15%,45%);">IIBS Banyuwangi</p>
@@ -340,7 +340,7 @@
                 <!-- Brand -->
                 <div class="space-y-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold font-serif flex-shrink-0" style="background: hsl(43,70%,47%); color: hsl(220,54%,15%);">M</div>
+                        <img src="<?= base_url('assets/logo/logo-smk.png') ?>" alt="Logo SMK Al-Munawwir IIBS" class="w-12 h-12 rounded-full flex-shrink-0 object-cover" style="background: hsl(43,70%,47%);">
                         <div>
                             <p class="font-bold font-serif text-lg">SMK Al-Munawwir</p>
                             <p class="text-sm opacity-80">International Islamic Boarding School</p>

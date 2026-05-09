@@ -167,10 +167,9 @@ $badge = $roleBadge[$role] ?? ['label' => ucfirst($role ?? 'User'), 'bg' => 'hsl
         <!-- ── Logo ──────────────────────────────────────────────────── -->
         <div class="flex items-center gap-3 px-6 py-5"
             style="border-bottom:1px solid hsl(220,40%,25%);">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg"
-                style="background:hsl(43,70%,47%);color:hsl(220,54%,12%);font-family:'Playfair Display',serif;">
-                M
-            </div>
+            <img src="<?= base_url('assets/logo/logo-smk.png') ?>" alt="Logo SMK Al-Munawwir IIBS"
+                class="w-10 h-10 rounded-xl flex-shrink-0 object-cover"
+                style="background:hsl(43,70%,47%);">
             <div class="min-w-0">
                 <p class="font-bold text-sm leading-tight truncate"
                     style="color:hsl(45,70%,95%);">SMK Al-Munawwir IIBS</p>
@@ -255,10 +254,9 @@ $badge = $roleBadge[$role] ?? ['label' => ucfirst($role ?? 'User'), 'bg' => 'hsl
     <div class="flex items-center justify-between px-6 py-5"
         style="border-bottom:1px solid hsl(220,40%,25%);">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold"
-                style="background:hsl(43,70%,47%);color:hsl(220,54%,12%);font-family:'Playfair Display',serif;">
-                M
-            </div>
+            <img src="<?= base_url('assets/logo/logo-smk.png') ?>" alt="Logo SMK Al-Munawwir IIBS"
+                class="w-8 h-8 rounded-xl object-cover"
+                style="background:hsl(43,70%,47%);">
             <span class="font-bold text-sm" style="color:hsl(45,70%,95%);">SMK Al-Munawwir</span>
         </div>
         <button @click="sidebarOpen = false"
