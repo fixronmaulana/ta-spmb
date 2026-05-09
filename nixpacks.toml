@@ -119,7 +119,11 @@ if (process.argv.length != 4) {
 
 await Promise.all([
     access('/app/public', constants.R_OK)
-        .then(() => e('chmod -R ugo+rw /app/writable'))
+        .then(() => {
+            e('chmod -R ugo+rw /app/writable');
+            e('mkdir -p /app/public/uploads/dokumen /app/public/uploads/foto /app/public/uploads/bukti');
+            e('chmod -R 777 /app/public/uploads');
+        })
         .catch(() => {}),
     compileTemplate(process.argv[2], process.argv[3])
 ]).catch(err => prestartLogger.error(err));
@@ -207,6 +211,7 @@ import { e } from "./cmd.mjs";
 
 export const getNixPath = (exe) => e(`nix-store -q ${e(`which ${exe}`)}`);
 '''
+
 [phases.setup]
 nixPkgs = [
     'php',
@@ -226,6 +231,8 @@ cmds = [
     'mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx',
     'mkdir -p writable/cache writable/logs writable/session writable/uploads',
     'chmod -R 777 writable',
+    'mkdir -p public/uploads/dokumen public/uploads/foto public/uploads/bukti',
+    'chmod -R 777 public/uploads',
     'composer install --ignore-platform-reqs',
 ]
 
@@ -234,4 +241,4 @@ dependsOn = ['install']
 cmds = []
 
 [start]
-cmd = 'node /assets/scripts/prestart.mjs /assets/nginx.template.conf /nginx.conf && (php-fpm -y /assets/php-fpm.conf & nginx -c /nginx.conf)'
+cmd = 'mkdir -p /app/public/uploads/dokumen /app/public/uploads/foto /app/public/uploads/bukti && chmod -R 777 /app/public/uploads && node /assets/scripts/prestart.mjs /assets/nginx.template.conf /nginx.conf && (php-fpm -y /assets/php-fpm.conf & nginx -c /nginx.conf)'
