@@ -295,7 +295,7 @@
                                 type="tel"
                                 id="phone"
                                 name="phone"
-                                placeholder="085231491879"
+                                placeholder="085222111333"
                                 class="form-input"
                                 :class="{ 'has-error': clientErrors.phone, 'has-success': form.phone && !clientErrors.phone }"
                                 x-model="form.phone"
@@ -317,7 +317,7 @@
                     <!-- Password -->
                     <div class="space-y-1.5 mb-5">
                         <label for="password" class="block text-sm font-medium" style="color: hsl(220,54%,15%);">
-                            Password
+                            Password Baru
                         </label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -329,7 +329,7 @@
                                 :type="showPassword ? 'text' : 'password'"
                                 id="password"
                                 name="password"
-                                placeholder="Masukkan password baru Anda"
+                                placeholder="Minimal 8 karakter"
                                 class="form-input has-right"
                                 :class="{ 'has-error': clientErrors.password, 'has-success': form.password && !clientErrors.password }"
                                 x-model="form.password"
@@ -389,7 +389,7 @@
                                 :type="showConfirm ? 'text' : 'password'"
                                 id="confirmPassword"
                                 name="password_confirm"
-                                placeholder="Konfirmasi password"
+                                placeholder="Ketik ulang password"
                                 class="form-input has-right"
                                 :class="{ 'has-error': clientErrors.confirmPassword, 'has-success': form.confirmPassword && !clientErrors.confirmPassword && form.password === form.confirmPassword }"
                                 x-model="form.confirmPassword"
