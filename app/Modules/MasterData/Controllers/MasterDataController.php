@@ -181,7 +181,7 @@ class MasterDataController extends BaseController
 
     public function simpanJenisDokumen()
     {
-        $id    = $this->request->getPost('id');
+        $id    = $this->request->getPost('id') ?: null;
         $tab   = 'dokumen';
         $kode  = trim(strtolower($this->request->getPost('kode') ?? ''));
         $kode  = preg_replace('/[^a-z0-9_]/', '_', $kode); // sanitasi: hanya huruf kecil, angka, underscore
@@ -200,33 +200,50 @@ class MasterDataController extends BaseController
                 ->with('active_tab', $tab);
         }
 
-        $urutan = $this->request->getPost('urutan');
-        if ($urutan === '' || $urutan === null) {
-            $urutan = $this->jenisDokumenModel->getMaxUrutan() + 1;
-        }
-
-        $data = [
-            'kode'         => $kode,
-            'nama_dokumen' => trim($this->request->getPost('nama_dokumen') ?? ''),
-            'keterangan'   => trim($this->request->getPost('keterangan') ?? '') ?: null,
-            'is_wajib'     => $this->request->getPost('is_wajib')  ? 1 : 0,
-            'is_active'    => $this->request->getPost('is_active') ? 1 : 0,
-            'urutan'       => (int) $urutan,
-        ];
-
-        if (empty($data['nama_dokumen'])) {
+        $namaDokumen = trim($this->request->getPost('nama_dokumen') ?? '');
+        if (empty($namaDokumen)) {
             return redirect()->to(base_url('admin/master-data'))
                 ->with('error', 'Nama dokumen wajib diisi.')
                 ->with('active_tab', $tab);
         }
 
+        // ── Tentukan nilai urutan ──────────────────────────────────────────
+        $urutanInput = $this->request->getPost('urutan');
+        $maxUrutan   = $this->jenisDokumenModel->getMaxUrutan();
+
+        if ($urutanInput === '' || $urutanInput === null) {
+            // Kosong → taruh di akhir (tidak ada konflik)
+            $targetUrutan = $maxUrutan + 1;
+        } else {
+            $targetUrutan = max(1, (int) $urutanInput);
+            // Batasi agar tidak melebihi total baris + 1
+            $targetUrutan = min($targetUrutan, $maxUrutan + 1);
+        }
+
+        // ── Jika urutan yang diminta sudah ditempati baris lain → geser semua ke bawah ──
+        if ($this->jenisDokumenModel->isUrutanTaken($targetUrutan, $id ? (int) $id : null)) {
+            $this->jenisDokumenModel->shiftUrutanUp($targetUrutan, $id ? (int) $id : null);
+        }
+
+        $data = [
+            'kode'         => $kode,
+            'nama_dokumen' => $namaDokumen,
+            'keterangan'   => trim($this->request->getPost('keterangan') ?? '') ?: null,
+            'is_wajib'     => $this->request->getPost('is_wajib')  ? 1 : 0,
+            'is_active'    => $this->request->getPost('is_active') ? 1 : 0,
+            'urutan'       => $targetUrutan,
+        ];
+
         if ($id) {
-            $this->jenisDokumenModel->update($id, $data);
+            $this->jenisDokumenModel->update((int) $id, $data);
             $msg = "Jenis dokumen '{$data['nama_dokumen']}' berhasil diperbarui.";
         } else {
             $this->jenisDokumenModel->insert($data);
             $msg = "Jenis dokumen '{$data['nama_dokumen']}' berhasil ditambahkan.";
         }
+
+        // ── Normalisasi: pastikan urutan selalu 1,2,3,… tanpa gap/duplikat ──
+        $this->jenisDokumenModel->normalizeUrutan();
 
         return redirect()->to(base_url('admin/master-data'))
             ->with('success', $msg)
@@ -299,6 +316,9 @@ class MasterDataController extends BaseController
         }
 
         $this->jenisDokumenModel->delete($id);
+
+        // Normalisasi ulang urutan setelah hapus agar tidak ada gap
+        $this->jenisDokumenModel->normalizeUrutan();
 
         return redirect()->to(base_url('admin/master-data'))
             ->with('success', "Jenis dokumen '{$row->nama_dokumen}' berhasil dihapus permanen.")

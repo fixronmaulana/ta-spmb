@@ -556,7 +556,7 @@ $activeTab = session()->getFlashdata('active_tab') ?? 'jurusan';
                     <tbody>
                         <?php foreach ($jenisDokumens as $i => $dok): ?>
                             <tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors <?= !$dok->is_active ? 'opacity-50' : '' ?>">
-                                <td class="py-3 px-4 text-gray-400 text-sm"><?= $dok->urutan ?></td>
+                                <td class="py-3 px-4 text-gray-400 text-sm"><?= $i + 1 ?></td>
                                 <td class="py-3 px-4">
                                     <code class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg font-mono"><?= esc($dok->kode) ?></code>
                                 </td>
