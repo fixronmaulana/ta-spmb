@@ -485,23 +485,66 @@ foreach ($dokumens as $dok) {
         </div>
     </div>
 
-    <!-- ══ INFO BOX ══════════════════════════════════════════════════════ -->
-    <div class="rounded-2xl p-5"
-        style="background:hsl(199,89%,48%,.07);border:1px solid hsl(199,89%,48%,.2);">
-        <div class="flex items-start gap-3">
-            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" style="color:hsl(199,89%,48%);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <div class="text-sm space-y-1" style="color:hsl(220,15%,45%);">
-                <p>Proses verifikasi membutuhkan waktu <strong>3–5 hari kerja</strong>.</p>
-                <p>Anda akan menerima notifikasi melalui sistem ini jika ada pembaruan status.</p>
-                <p>Jika ada pertanyaan, hubungi panitia SPMB melalui
-                    <a href="https://wa.me/62812xxxx" class="font-semibold" style="color:hsl(199,89%,40%);">
-                        WhatsApp: 0812-xxxx-xxxx
-                    </a>
-                </p>
+    <!-- ══ INFO BOX + WA GROUP CTA ═════════════════════════════════════ -->
+    <div class="rounded-2xl overflow-hidden"
+        style="border:1px solid hsl(142,71%,45%,.25);
+                box-shadow:0 4px 6px -1px hsl(142 71% 45%/0.08);">
+
+        <!-- Banner Gabung Grup WA -->
+        <div class="px-5 py-5"
+            style="background:linear-gradient(135deg,hsl(142,55%,96%) 0%,hsl(162,55%,94%) 100%);
+                    border-bottom:1px solid hsl(142,71%,45%,.2);">
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                <div class="flex-1 text-center sm:text-left">
+                    <p class="font-bold text-base mb-1" style="color:hsl(142,55%,22%);">
+                        Sudah bergabung di Grup WhatsApp Pendaftar?
+                    </p>
+                    <p class="text-sm" style="color:hsl(142,40%,38%);">
+                        Dapatkan info terbaru, pengumuman seleksi, dan jadwal SPMB langsung dari panitia.
+                    </p>
+                </div>
+                <?php
+                $waGrupLink = $waGrupLink ?? '#';
+                ?>
+                <a href="<?= esc($waGrupLink) ?>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex items-center gap-2.5 px-5 py-3 rounded-xl text-white text-sm font-bold flex-shrink-0 transition-transform hover:scale-105"
+                    style="background:linear-gradient(135deg,hsl(142,60%,38%),hsl(142,65%,30%));
+                          box-shadow:0 4px 14px -2px hsl(142 65% 38%/0.4);">
+                    <!-- WA Icon mini -->
+                    <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 32 32" fill="currentColor">
+                        <path d="M16 0C7.163 0 0 7.163 0 16c0 2.827.737 5.476 2.027 7.775L0 32l8.476-2.004A15.932 15.932 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm0 29.333a13.267 13.267 0 01-6.773-1.846l-.486-.288-5.027 1.188 1.21-4.906-.317-.504A13.267 13.267 0 012.667 16C2.667 8.636 8.636 2.667 16 2.667S29.333 8.636 29.333 16 23.364 29.333 16 29.333zm7.27-9.94c-.398-.2-2.353-1.16-2.717-1.293-.365-.133-.63-.2-.896.2-.265.397-1.03 1.293-1.26 1.56-.232.265-.464.298-.863.1-.398-.2-1.683-.62-3.204-1.977-1.185-1.056-1.984-2.36-2.217-2.758-.232-.397-.025-.612.174-.81.179-.177.398-.464.597-.696.2-.232.265-.397.398-.663.133-.265.066-.497-.033-.696-.1-.2-.896-2.16-1.228-2.957-.323-.775-.652-.67-.896-.682-.232-.01-.497-.013-.763-.013a1.464 1.464 0 00-1.06.497c-.364.397-1.393 1.36-1.393 3.317s1.426 3.847 1.625 4.112c.199.265 2.806 4.283 6.797 6.007.95.41 1.692.655 2.27.838.954.304 1.822.26 2.508.158.765-.114 2.353-.963 2.686-1.893.332-.93.332-1.726.232-1.893-.098-.166-.364-.265-.762-.464z" />
+                    </svg>
+                    Gabung Grup WA
+                    <svg class="w-3.5 h-3.5 opacity-75" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Info box kontak -->
+        <div class="px-5 py-4" style="background:hsl(199,89%,48%,.05);">
+            <div class="flex items-start gap-3">
+                <svg class="w-4.5 h-4.5 w-5 h-5 flex-shrink-0 mt-0.5" style="color:hsl(199,89%,48%);" fill="none"
+                    stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <div class="text-sm space-y-1" style="color:hsl(220,15%,45%);">
+                    <p>Proses verifikasi membutuhkan waktu <strong>3–5 hari kerja</strong>.</p>
+                    <p>Anda akan menerima notifikasi melalui sistem ini jika ada pembaruan status.</p>
+                    <p>Jika ada pertanyaan, hubungi panitia SPMB langsung via
+                        <a href="<?= esc($waKontakLink ?? '#') ?>" target="_blank" rel="noopener"
+                            class="font-semibold" style="color:hsl(142,60%,32%);">
+                            WhatsApp: <?= esc($waKontakNo ?? '0812-xxxx-xxxx') ?>
+                        </a>
+                    </p>
+                </div>
             </div>
         </div>
     </div>

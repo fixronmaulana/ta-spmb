@@ -60,6 +60,7 @@ $routes->group('dashboard', ['filter' => 'auth:calon_siswa'], function ($routes)
     $routes->post('formulir/verify-wa-otp',              'App\Modules\Pendaftaran\Controllers\PendaftaranController::verifyWaOtp');
     $routes->get('dokumen/lihat/(:num)',                 'App\Modules\Pendaftaran\Controllers\PendaftaranController::lihatDokumen/$1');
     $routes->get('status',                               'App\Modules\Pendaftaran\Controllers\PendaftaranController::status');
+    $routes->get('sukses',                               'App\Modules\Pendaftaran\Controllers\PendaftaranController::sukses');
     $routes->get('cetak-bukti',                          'App\Modules\Pendaftaran\Controllers\PendaftaranController::cetakBukti');
     $routes->get('pengumuman',                           'App\Modules\Seleksi\Controllers\PengumumanController::index');
     $routes->post('pengumuman/cari',                     'App\Modules\Seleksi\Controllers\PengumumanController::cari');

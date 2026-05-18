@@ -203,8 +203,8 @@ class PendaftaranController extends BaseController
                 ->with('success', "Langkah {$stepNum} berhasil disimpan.");
         }
 
-        // ── Step 4 (Submit): redirect ke halaman status ───────────────
-        $redirectTo = base_url('dashboard/status');
+        // ── Step 4 (Submit): redirect ke halaman sukses (bukan langsung status) ──
+        $redirectTo = base_url('dashboard/sukses');
 
         if ($isAjax) {
             return $this->response->setStatusCode(200)->setJSON([
@@ -408,6 +408,47 @@ class PendaftaranController extends BaseController
     }
 
     // =========================================================
+    // SUKSES — Halaman konfirmasi setelah submit formulir
+    // =========================================================
+    public function sukses()
+    {
+        $pendaftaran = $this->pendaftaranModel->getByUserId($this->userId());
+
+        // Jika belum ada pendaftaran atau masih draft, arahkan ke formulir
+        if (! $pendaftaran) {
+            return redirect()->to(base_url('dashboard/formulir'))
+                ->with('info', 'Anda belum mengirim formulir pendaftaran.');
+        }
+
+        // Jika status masih draft/revisi → belum submit, ke formulir
+        if (in_array($pendaftaran->status, ['draft', 'revisi'])) {
+            return redirect()->to(base_url('dashboard/formulir'));
+        }
+
+        $dataDiri = $this->dataDiriModel->getByPendaftaranId($pendaftaran->id);
+
+        // Ambil config WA dari env
+        $waGrupLink   = env('WA_GRUP_LINK', '#');
+        $waKontakNo   = env('WA_KONTAK_NO', '0812-xxxx-xxxx');
+        $waKontakNoRaw = preg_replace('/[^0-9]/', '', $waKontakNo);
+        if (str_starts_with($waKontakNoRaw, '0')) {
+            $waKontakNoRaw = '62' . substr($waKontakNoRaw, 1);
+        }
+        $waKontakLink = "https://wa.me/{$waKontakNoRaw}";
+
+        $data = [
+            'title'        => 'Pendaftaran Berhasil Dikirim',
+            'pendaftaran'  => $pendaftaran,
+            'dataDiri'     => $dataDiri,
+            'waGrupLink'   => $waGrupLink,
+            'waKontakLink' => $waKontakLink,
+            'waKontakNo'   => $waKontakNo,
+        ];
+
+        return $this->render('pendaftaran/sukses', $data);
+    }
+
+    // =========================================================
     // STATUS
     // =========================================================
     public function status()
@@ -423,12 +464,24 @@ class PendaftaranController extends BaseController
         $dataDiri    = $this->dataDiriModel->getByPendaftaranId($pendaftaran->id);
         $dokumens    = $this->dokumenModel->getByPendaftaranId($pendaftaran->id);
 
+        // Ambil config WA dari env
+        $waGrupLink    = env('WA_GRUP_LINK', '#');
+        $waKontakNo    = env('WA_KONTAK_NO', '0812-xxxx-xxxx');
+        $waKontakNoRaw = preg_replace('/[^0-9]/', '', $waKontakNo);
+        if (str_starts_with($waKontakNoRaw, '0')) {
+            $waKontakNoRaw = '62' . substr($waKontakNoRaw, 1);
+        }
+        $waKontakLink = "https://wa.me/{$waKontakNoRaw}";
+
         $data = [
-            'title'       => 'Status Pendaftaran',
-            'pendaftaran' => $pendaftaran,
-            'dataDiri'    => $dataDiri,
-            'dokumens'    => $dokumens,
-            'timeline'    => $this->buildTimeline($pendaftaran),
+            'title'        => 'Status Pendaftaran',
+            'pendaftaran'  => $pendaftaran,
+            'dataDiri'     => $dataDiri,
+            'dokumens'     => $dokumens,
+            'timeline'     => $this->buildTimeline($pendaftaran),
+            'waGrupLink'   => $waGrupLink,
+            'waKontakLink' => $waKontakLink,
+            'waKontakNo'   => $waKontakNo,
         ];
 
         return $this->render('pendaftaran/status', $data);
