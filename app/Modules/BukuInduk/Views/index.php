@@ -26,23 +26,127 @@ function bi_bmi(float $b): array
 <div class="space-y-6" x-data="bukuIndukPage()" x-cloak>
 
     <!-- ══ PAGE HEADER ══════════════════════════════════════════ -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-bold font-serif tracking-tight" style="color:hsl(220,54%,15%)">Buku Induk Siswa</h1>
-            <p class="text-sm mt-1" style="color:hsl(220,15%,50%)">Kelola seluruh catatan permanen siswa aktif sekolah</p>
+    <div class="flex flex-col gap-3">
+
+        <!-- Baris 1: Judul + Search -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold font-serif tracking-tight" style="color:hsl(220,54%,15%)">Buku Induk Siswa</h1>
+                <p class="text-sm mt-1" style="color:hsl(220,15%,50%)">Kelola seluruh catatan permanen siswa aktif sekolah</p>
+            </div>
+            <form method="get" class="relative w-full sm:w-[340px]">
+                <?php if ($selectedId): ?><input type="hidden" name="id" value="<?= $selectedId ?>"><?php endif; ?>
+                <?php if (!empty($filters['jurusan_id'])): ?><input type="hidden" name="jurusan_id" value="<?= esc($filters['jurusan_id']) ?>"><?php endif; ?>
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style="color:hsl(220,15%,55%)" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
+                </svg>
+                <input type="text" name="search" value="<?= esc($filters['search'] ?? '') ?>"
+                    placeholder="Cari NIS, nama, atau kelas..."
+                    class="w-full pl-9 pr-4 h-11 border rounded-xl text-sm focus:outline-none focus:ring-2"
+                    style="border-color:hsl(220,20%,85%);color:hsl(220,54%,15%)">
+            </form>
         </div>
-        <form method="get" class="relative w-full sm:w-[340px]">
-            <?php if ($selectedId): ?><input type="hidden" name="id" value="<?= $selectedId ?>"><?php endif; ?>
-            <?php if (!empty($filters['jurusan_id'])): ?><input type="hidden" name="jurusan_id" value="<?= esc($filters['jurusan_id']) ?>"><?php endif; ?>
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style="color:hsl(220,15%,55%)" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
-            </svg>
-            <input type="text" name="search" value="<?= esc($filters['search'] ?? '') ?>"
-                placeholder="Cari NIS, nama, atau kelas..."
-                class="w-full pl-9 pr-4 h-11 border rounded-xl text-sm focus:outline-none focus:ring-2"
-                style="border-color:hsl(220,20%,85%);color:hsl(220,54%,15%)">
-        </form>
+
+        <!-- Baris 2: Toolbar Export -->
+        <?php
+        $exportQs = http_build_query(array_filter([
+            'jurusan_id'   => $filters['jurusan_id']   ?? '',
+            'status_siswa' => $filters['status_siswa'] ?? '',
+            'search'       => $filters['search']       ?? '',
+        ]));
+        $exportAllUrl = base_url('admin/buku-induk/export-excel') . ($exportQs ? '?' . $exportQs : '');
+        ?>
+        <div class="flex flex-wrap items-center gap-2">
+
+            <!-- Export semua (sesuai filter aktif) -->
+            <a href="<?= $exportAllUrl ?>"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition"
+                style="background:hsl(142,55%,95%);border-color:hsl(142,55%,70%);color:hsl(142,55%,28%);"
+                onmouseover="this.style.background='hsl(142,55%,88%)'"
+                onmouseout="this.style.background='hsl(142,55%,95%)'">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Export Semua ke Excel
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style="background:hsl(142,55%,38%);color:white"><?= number_format($total) ?></span>
+            </a>
+
+            <!-- Export selected -->
+            <form id="formExportSelected"
+                method="post"
+                action="<?= base_url('admin/buku-induk/export-excel-selected') ?>"
+                x-data>
+                <?= csrf_field() ?>
+                <template x-for="id in $store.bukuIndukChecked.ids" :key="id">
+                    <input type="hidden" name="ids[]" :value="id">
+                </template>
+                <button type="button"
+                    @click="
+                            if ($store.bukuIndukChecked.ids.length === 0) {
+                                alert('Centang minimal 1 siswa dari daftar terlebih dahulu.');
+                            } else {
+                                $el.closest('form').submit();
+                            }
+                        "
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition"
+                    style="background:hsl(38,80%,95%);border-color:hsl(38,70%,65%);color:hsl(38,60%,28%);"
+                    onmouseover="this.style.background='hsl(38,80%,88%)'"
+                    onmouseout="this.style.background='hsl(38,80%,95%)'">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                    Export Terpilih
+                    <span x-text="$store.bukuIndukChecked.ids.length > 0 ? '(' + $store.bukuIndukChecked.ids.length + ')' : ''"
+                        class="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                        style="background:hsl(38,60%,40%);color:white"
+                        x-show="$store.bukuIndukChecked.ids.length > 0"></span>
+                </button>
+            </form>
+
+            <!-- Centang semua / batal -->
+            <button type="button"
+                @click="$store.bukuIndukChecked.toggleAll(<?= htmlspecialchars(json_encode(array_column($siswas, 'id'))) ?>)"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition"
+                style="background:white;border-color:hsl(220,20%,82%);color:hsl(220,15%,45%);"
+                onmouseover="this.style.background='hsl(220,20%,96%)'"
+                onmouseout="this.style.background='white'">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        x-bind:d="$store.bukuIndukChecked.ids.length > 0
+                              ? 'M6 18L18 6M6 6l12 12'
+                              : 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'" />
+                </svg>
+                <span x-text="$store.bukuIndukChecked.ids.length > 0 ? 'Batal Pilih' : 'Pilih Semua'">Pilih Semua</span>
+            </button>
+
+            <?php if (!empty($filters['jurusan_id']) || !empty($filters['search'])): ?>
+                <span class="text-xs italic" style="color:hsl(220,15%,55%)">
+                    Filter aktif —
+                    <?php if (!empty($filters['jurusan_id'])): ?>Jurusan ID: <?= esc($filters['jurusan_id']) ?><?php endif; ?>
+                    <?php if (!empty($filters['search'])): ?> | Cari: "<?= esc($filters['search']) ?>"<?php endif; ?>
+                </span>
+            <?php endif; ?>
+        </div>
     </div>
+
+    <!-- Alpine store untuk checkbox export selected -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('bukuIndukChecked', {
+                ids: [],
+                toggle(id) {
+                    const idx = this.ids.indexOf(id);
+                    idx === -1 ? this.ids.push(id) : this.ids.splice(idx, 1);
+                },
+                has(id) {
+                    return this.ids.includes(id);
+                },
+                toggleAll(allIds) {
+                    this.ids = this.ids.length > 0 ? [] : [...allIds];
+                }
+            });
+        });
+    </script>
 
 
     <!-- ══ FLASH MESSAGE ══ -->
@@ -108,24 +212,52 @@ function bi_bmi(float $b): array
                         . (!empty($filters['search'])     ? '&search=' . urlencode($filters['search'])       : '')
                         . (!empty($filters['jurusan_id']) ? '&jurusan_id=' . $filters['jurusan_id']         : ''));
                 ?>
-                    <a href="<?= $href ?>"
-                        class="flex items-center gap-3 px-4 py-3.5 transition-colors border-l-4 group"
+                    <!-- Item siswa: wrapper div supaya checkbox + link bisa sejajar -->
+                    <div class="relative flex items-stretch border-l-4 transition-colors group"
                         style="<?= $active ? 'border-left-color:hsl(43,70%,47%);background:hsl(220,54%,97%)' : 'border-left-color:transparent' ?>"
-                        onmouseover="if(!this.style.background)this.style.background='hsl(220,20%,97%)'"
-                        onmouseout="this.style.background='<?= $active ? 'hsl(220,54%,97%)' : '' ?>'">
-                        <div class="h-12 w-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
-                            style="<?= $active ? 'background:linear-gradient(135deg,hsl(220,54%,20%),hsl(220,54%,35%));color:hsl(45,70%,92%)' : 'background:hsl(220,20%,92%);color:hsl(220,54%,25%)' ?>">
-                            <?= $init ?>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="font-semibold text-sm truncate" style="color:hsl(220,54%,15%)"><?= esc($s->nama_lengkap) ?></p>
-                            <p class="text-xs font-mono" style="color:hsl(220,15%,50%)">NIS: <?= esc($s->nis) ?></p>
-                            <div class="flex gap-1.5 mt-1.5 flex-wrap">
-                                <span class="px-1.5 py-0.5 border rounded-full text-[10px] font-medium" style="border-color:hsl(220,20%,82%);color:hsl(220,15%,40%)"><?= esc($s->jurusan_kode) ?></span>
-                                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-medium" style="background:hsl(142,71%,45%,0.1);color:hsl(142,60%,28%)"><?= esc($s->kelas_nama ?? '-') ?></span>
+                        x-data>
+
+                        <!-- Checkbox export -->
+                        <label class="flex items-center pl-3 pr-1 cursor-pointer shrink-0"
+                            @click.stop>
+                            <input type="checkbox"
+                                :checked="$store.bukuIndukChecked.has(<?= $s->id ?>)"
+                                @change="$store.bukuIndukChecked.toggle(<?= $s->id ?>)"
+                                class="w-4 h-4 rounded cursor-pointer"
+                                style="accent-color:hsl(220,54%,30%)">
+                        </label>
+
+                        <!-- Link ke detail -->
+                        <a href="<?= $href ?>"
+                            class="flex items-center gap-3 px-3 py-3.5 flex-1 group transition-colors"
+                            onmouseover="if(!this.closest('[style*=background]').style.background)this.style.background='hsl(220,20%,97%)'"
+                            onmouseout="this.style.background=''">
+                            <div class="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
+                                style="<?= $active ? 'background:linear-gradient(135deg,hsl(220,54%,20%),hsl(220,54%,35%));color:hsl(45,70%,92%)' : 'background:hsl(220,20%,92%);color:hsl(220,54%,25%)' ?>">
+                                <?= $init ?>
                             </div>
-                        </div>
-                    </a>
+                            <div class="min-w-0 flex-1">
+                                <p class="font-semibold text-sm truncate" style="color:hsl(220,54%,15%)"><?= esc($s->nama_lengkap) ?></p>
+                                <p class="text-xs font-mono" style="color:hsl(220,15%,50%)">NIS: <?= esc($s->nis) ?></p>
+                                <div class="flex gap-1.5 mt-1.5 flex-wrap">
+                                    <span class="px-1.5 py-0.5 border rounded-full text-[10px] font-medium" style="border-color:hsl(220,20%,82%);color:hsl(220,15%,40%)"><?= esc($s->jurusan_kode) ?></span>
+                                    <span class="px-1.5 py-0.5 rounded-full text-[10px] font-medium" style="background:hsl(142,71%,45%,0.1);color:hsl(142,60%,28%)"><?= esc($s->kelas_nama ?? '-') ?></span>
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- Tombol export single (muncul saat hover) -->
+                        <a href="<?= base_url('admin/buku-induk/' . $s->id . '/export-excel') ?>"
+                            title="Export Excel siswa ini"
+                            class="flex items-center px-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            style="color:hsl(142,55%,35%)"
+                            onmouseover="this.style.color='hsl(142,55%,25%)'"
+                            onmouseout="this.style.color='hsl(142,55%,35%)'">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                        </a>
+                    </div>
                 <?php endforeach; ?>
                 <?php if (empty($siswas)): ?>
                     <div class="py-14 text-center" style="color:hsl(220,15%,60%)">
@@ -197,6 +329,17 @@ function bi_bmi(float $b): array
                                         <path d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659" />
                                     </svg>
                                     Cetak Buku Induk
+                                </a>
+
+                                <!-- Export Excel siswa ini -->
+                                <a href="<?= base_url('admin/buku-induk/' . $selected->id . '/export-excel') ?>"
+                                    class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold"
+                                    style="background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.35);color:white"
+                                    title="Unduh data siswa ini ke Excel">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    Export Excel
                                 </a>
                             </div>
                         </div>

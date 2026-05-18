@@ -8,7 +8,8 @@ use App\Modules\BukuInduk\Models\BukuIndukEditLogModel;
 use App\Modules\BukuInduk\Services\BukuIndukService;
 use App\Modules\Pendaftaran\Models\PendaftaranModel;
 use App\Modules\MasterData\Models\JurusanModel;
-use App\Modules\MasterData\Models\KelasModel;
+use App\Modules\MasterData\Models\KelasModel; 
+use App\Modules\BukuInduk\Libraries\ExcelExporter;
 
 class BukuIndukController extends BaseController
 {
@@ -363,6 +364,73 @@ class BukuIndukController extends BaseController
         }
 
         return redirect()->to(base_url('admin/buku-induk'))->with($flashType, $msg);
+    }
+
+    // =========================================================
+    // EXPORT EXCEL — BULK (semua / filter / selected)
+    // GET  admin/buku-induk/export-excel
+    // POST admin/buku-induk/export-excel-selected
+    // =========================================================
+
+    /**
+     * Export bulk: ambil filter dari query-string (sama persis
+     * dengan filter di halaman index agar hasilnya konsisten).
+     *
+     * ?jurusan_id=&status_siswa=aktif&search=
+     */
+    public function exportExcel()
+    {
+        $filters = [
+            'jurusan_id'   => $this->request->getGet('jurusan_id')   ?? '',
+            'status_siswa' => $this->request->getGet('status_siswa') ?? '',
+            'search'       => $this->request->getGet('search')       ?? '',
+        ];
+
+        // Untuk info header di Excel kita butuh nama jurusan juga
+        if (! empty($filters['jurusan_id'])) {
+            $j = (new \App\Modules\MasterData\Models\JurusanModel())->find((int) $filters['jurusan_id']);
+            $filters['jurusan_nama'] = $j ? $j->nama : '';
+        }
+
+        $siswas = $this->model->getAllForExport($filters);
+
+        (new ExcelExporter())->exportBulk($siswas, $filters);
+        // exportBulk() memanggil exit — tidak ada kode setelah ini
+    }
+
+    /**
+     * Export selected: terima array id[] dari POST (checkbox di halaman index).
+     */
+    public function exportExcelSelected()
+    {
+        $ids = $this->request->getPost('ids') ?? [];
+
+        if (empty($ids)) {
+            return redirect()->to(base_url('admin/buku-induk'))
+                ->with('error', 'Pilih minimal 1 siswa untuk diekspor.');
+        }
+
+        $filters = ['ids' => $ids];
+        $siswas  = $this->model->getAllForExport($filters);
+
+        (new ExcelExporter())->exportBulk($siswas, ['jurusan_nama' => 'Terpilih (' . count($siswas) . ')']);
+    }
+
+    // =========================================================
+    // EXPORT EXCEL — SINGLE (1 siswa)
+    // GET  admin/buku-induk/{id}/export-excel
+    // =========================================================
+
+    public function exportExcelSingle(int $id)
+    {
+        $siswa = $this->model->getWithRelations($id);
+
+        if (! $siswa) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Data siswa tidak ditemukan.');
+        }
+
+        (new ExcelExporter())->exportSingle($siswa);
+        // exportSingle() memanggil exit — tidak ada kode setelah ini
     }
 
     // =========================================================

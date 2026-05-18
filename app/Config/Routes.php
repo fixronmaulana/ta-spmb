@@ -106,8 +106,11 @@ $routes->group('admin', ['filter' => 'auth:admin_tu'], function ($routes) {
     $routes->post('buku-induk/konversi-satu',           'App\Modules\BukuInduk\Controllers\BukuIndukController::konversi');
     $routes->post('buku-induk/konversi-bulk',           'App\Modules\BukuInduk\Controllers\BukuIndukController::konversiBulk');
     $routes->post('buku-induk/konversi-bulk-selected',  'App\Modules\BukuInduk\Controllers\BukuIndukController::konversiBulkSelected');
+    $routes->get('buku-induk/export-excel',             'App\Modules\BukuInduk\Controllers\BukuIndukController::exportExcel');
+    $routes->post('buku-induk/export-excel-selected',   'App\Modules\BukuInduk\Controllers\BukuIndukController::exportExcelSelected');
     $routes->get('buku-induk',                          'App\Modules\BukuInduk\Controllers\BukuIndukController::index');
     $routes->get('buku-induk/(:num)',                   'App\Modules\BukuInduk\Controllers\BukuIndukController::detail/$1');
+    $routes->get('buku-induk/(:num)/export-excel',      'App\Modules\BukuInduk\Controllers\BukuIndukController::exportExcelSingle/$1');
     $routes->post('buku-induk/(:num)/pribadi',          'App\Modules\BukuInduk\Controllers\BukuIndukController::updatePribadi/$1');
     $routes->post('buku-induk/(:num)/kesehatan',        'App\Modules\BukuInduk\Controllers\BukuIndukController::updateKesehatan/$1');
     $routes->post('buku-induk/(:num)/kelas',            'App\Modules\BukuInduk\Controllers\BukuIndukController::updateKelas/$1');

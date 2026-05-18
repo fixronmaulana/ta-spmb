@@ -173,6 +173,42 @@ class BukuIndukModel extends Model
         return $ok;
     }
 
+    /**
+     * Ambil semua field yang dibutuhkan untuk export Excel.
+     * Berbeda dengan getAllWithRelations() yang hanya mengambil field ringkas.
+     */
+    public function getAllForExport(array $filters = []): array
+    {
+        $q = $this->select(
+            'buku_induks.*,
+             j.nama  as jurusan_nama, j.kode  as jurusan_kode,
+             k.nama  as kelas_nama,   k.wali_kelas'
+        )
+            ->join('jurusan j', 'j.id = buku_induks.jurusan_id')
+            ->join('kelas k',   'k.id = buku_induks.kelas_id', 'left')
+            ->orderBy('buku_induks.nis', 'ASC');
+
+        if (! empty($filters['jurusan_id'])) {
+            $q->where('buku_induks.jurusan_id', $filters['jurusan_id']);
+        }
+        if (! empty($filters['status_siswa'])) {
+            $q->where('buku_induks.status_siswa', $filters['status_siswa']);
+        }
+        if (! empty($filters['search'])) {
+            $q->groupStart()
+                ->like('buku_induks.nama_lengkap', $filters['search'])
+                ->orLike('buku_induks.nis',        $filters['search'])
+                ->orLike('buku_induks.nisn',       $filters['search'])
+                ->groupEnd();
+        }
+        // Export IDs tertentu (untuk export selected)
+        if (! empty($filters['ids']) && is_array($filters['ids'])) {
+            $q->whereIn('buku_induks.id', array_map('intval', $filters['ids']));
+        }
+
+        return $q->findAll();
+    }
+
     public function countByStatus(string $status): int
     {
         return $this->where('status_siswa', $status)->countAllResults();
