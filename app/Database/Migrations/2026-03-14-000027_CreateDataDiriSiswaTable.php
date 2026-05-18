@@ -129,19 +129,9 @@ class CreateDataDiriSiswaTable extends Migration
                 'constraint' => 150,
                 'null'       => true,
             ],
-            'npsn_sekolah' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 20,
-                'null'       => true,
-            ],
             'tahun_lulus' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 10,
-                'null'       => true,
-            ],
-            'nilai_rata_rata' => [
-                'type'       => 'DECIMAL',
-                'constraint' => '5,2',
                 'null'       => true,
             ],
             'nama_ayah' => [

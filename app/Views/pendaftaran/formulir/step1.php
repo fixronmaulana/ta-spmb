@@ -436,11 +436,7 @@ function errField(string $field, array $errors): string
                         <input type="text" name="alamat_sekolah" value="<?= esc(old('alamat_sekolah', $d->alamat_sekolah ?? '')) ?>"
                             placeholder="Alamat sekolah asal" class="<?= $inpN ?>">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1.5" style="color:hsl(220,54%,15%);">NPSN Sekolah</label>
-                        <input type="text" name="npsn_sekolah" maxlength="8" value="<?= esc(old('npsn_sekolah', $d->npsn_sekolah ?? '')) ?>"
-                            placeholder="8 digit NPSN" class="<?= $inpN ?>" inputmode="numeric">
-                    </div>
+
                     <div>
                         <label class="block text-sm font-medium mb-1.5" style="color:hsl(220,54%,15%);">Tahun Lulus</label>
                         <select name="tahun_lulus" class="<?= $sel ?>">
@@ -450,13 +446,7 @@ function errField(string $field, array $errors): string
                             <?php endfor; ?>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1.5" style="color:hsl(220,54%,15%);">Nilai Rata-rata Rapor</label>
-                        <input type="number" name="nilai_rata_rata" step="0.01" min="0" max="100"
-                            value="<?= esc(old('nilai_rata_rata', $d->nilai_rata_rata ?? '')) ?>"
-                            placeholder="Contoh: 85.50" class="<?= $inpN ?>">
-                        <p class="text-xs mt-1" style="color:hsl(220,15%,55%);">Rata-rata semester 1–5</p>
-                    </div>
+
                 </div>
             </div>
 

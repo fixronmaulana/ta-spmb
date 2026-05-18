@@ -39,7 +39,6 @@
                     <tr>
                         <th class="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase">Nama</th>
                         <th class="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Asal Sekolah</th>
-                        <th class="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Nilai</th>
                         <th class="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Jurusan Diterima</th>
                     </tr>
                 </thead>
@@ -48,9 +47,6 @@
                         <tr>
                             <td class="px-5 py-2.5 font-medium text-gray-900"><?= esc($p->nama_lengkap ?? '-') ?></td>
                             <td class="px-3 py-2.5 text-xs text-gray-500"><?= esc($p->asal_sekolah ?? '-') ?></td>
-                            <td class="px-3 py-2.5 text-center">
-                                <span class="font-bold text-green-700"><?= number_format($p->nilai_rata_rata ?? 0, 2) ?></span>
-                            </td>
                             <td class="px-3 py-2.5 text-sm text-blue-700 font-medium"><?= esc($p->jurusan_diterima_nama ?? $p->jurusan_pilihan1_nama ?? '-') ?></td>
                         </tr>
                     <?php endforeach; ?>
@@ -71,7 +67,6 @@
                 <thead class="border-b border-gray-100 bg-gray-50">
                     <tr>
                         <th class="text-left px-5 py-2.5 text-xs font-semibold text-gray-500">Nama</th>
-                        <th class="text-center px-3 py-2.5 text-xs font-semibold text-gray-500">Nilai</th>
                         <th class="text-left px-3 py-2.5 text-xs font-semibold text-gray-500">Pilihan 1</th>
                     </tr>
                 </thead>
@@ -79,7 +74,6 @@
                     <?php foreach ($tidakLulus as $p): ?>
                         <tr>
                             <td class="px-5 py-2.5 text-gray-700"><?= esc($p->nama_lengkap ?? '-') ?></td>
-                            <td class="px-3 py-2.5 text-center text-gray-500"><?= number_format($p->nilai_rata_rata ?? 0, 2) ?></td>
                             <td class="px-3 py-2.5 text-xs text-gray-500"><?= esc($p->jurusan_pilihan1_nama ?? '-') ?></td>
                         </tr>
                     <?php endforeach; ?>

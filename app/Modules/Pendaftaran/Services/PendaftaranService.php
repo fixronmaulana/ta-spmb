@@ -109,9 +109,7 @@ class PendaftaranService
                 'email_siswa'     => $data['email_siswa']     ?? null,
                 'asal_sekolah'    => $data['asal_sekolah']    ?? null,
                 'alamat_sekolah'  => $data['alamat_sekolah']  ?? null,
-                'npsn_sekolah'    => $data['npsn_sekolah']    ?? null,
                 'tahun_lulus'     => $data['tahun_lulus']     ?? null,
-                'nilai_rata_rata' => $data['nilai_rata_rata'] ?? null,
             ]);
 
             if (empty($payload)) {
@@ -178,9 +176,7 @@ class PendaftaranService
                 'pekerjaan_ibu'    => $data['pekerjaan_ibu']    ?? null,
                 'pendidikan_ibu'   => $data['pendidikan_ibu']   ?? null,
                 'penghasilan_ibu'  => $data['penghasilan_ibu']  ?? null,
-                // BUG FIX: no_hp_ortu adalah nomor HP AYAH
                 'no_hp_ortu'       => $data['no_hp_ortu']       ?? null,
-                // BUG FIX: no_hp_ibu sekarang disimpan ke kolom tersendiri
                 'no_hp_ibu'        => $data['no_hp_ibu']        ?? null,
                 'nama_wali'        => $data['nama_wali']        ?? null,
                 'no_hp_wali'       => $data['no_hp_wali']       ?? null,

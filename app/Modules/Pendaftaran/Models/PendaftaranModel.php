@@ -162,7 +162,7 @@ class PendaftaranModel extends Model
 
     public function getAllForSeleksi(): array
     {
-        return $this->select('pendaftaran.*, dds.nama_lengkap, dds.nisn, dds.nilai_rata_rata,
+        return $this->select('pendaftaran.*, dds.nama_lengkap, dds.nisn,
                 dds.asal_sekolah, dds.jenis_kelamin,
                 j1.nama as jurusan_pilihan1_nama, j1.kode as jurusan_pilihan1_kode,
                 j2.nama as jurusan_pilihan2_nama,
@@ -173,7 +173,7 @@ class PendaftaranModel extends Model
             ->join('jurusan j1',           'j1.id = pendaftaran.jurusan_pilihan1_id', 'left')
             ->join('jurusan j2',           'j2.id = pendaftaran.jurusan_pilihan2_id', 'left')
             ->whereIn('pendaftaran.status', ['verifikasi', 'seleksi', 'lulus', 'tidak_lulus'])
-            ->orderBy('dds.nilai_rata_rata', 'DESC')
+            ->orderBy('pendaftaran.created_at', 'ASC')
             ->findAll();
     }
 

@@ -258,7 +258,7 @@ class LaporanController extends BaseController
         $rows = $this->pendaftaranModel
             ->select('pendaftaran.*, u.nama_lengkap as nama_akun, u.email,
                       dds.nama_lengkap, dds.nisn, dds.jenis_kelamin, dds.tanggal_lahir,
-                      dds.asal_sekolah, dds.nilai_rata_rata, dds.no_hp,
+                      dds.asal_sekolah, dds.no_hp,
                       j1.nama as jurusan1, j2.nama as jurusan2, jd.nama as jurusan_diterima')
             ->join('users u', 'u.id = pendaftaran.user_id')
             ->join('data_diri_siswas dds', 'dds.pendaftaran_id = pendaftaran.id', 'left')
@@ -280,7 +280,6 @@ class LaporanController extends BaseController
             'NISN',
             'L/P',
             'Asal Sekolah',
-            'Nilai Rata2',
             'Pilihan 1',
             'Pilihan 2',
             'Jurusan Diterima',
@@ -308,12 +307,11 @@ class LaporanController extends BaseController
             $sheet->setCellValue('D' . $r, $row->nisn ?? '-');
             $sheet->setCellValue('E' . $r, $row->jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan');
             $sheet->setCellValue('F' . $r, $row->asal_sekolah ?? '-');
-            $sheet->setCellValue('G' . $r, $row->nilai_rata_rata ?? '-');
-            $sheet->setCellValue('H' . $r, $row->jurusan1 ?? '-');
-            $sheet->setCellValue('I' . $r, $row->jurusan2 ?? '-');
-            $sheet->setCellValue('J' . $r, $row->jurusan_diterima ?? '-');
-            $sheet->setCellValue('K' . $r, ucwords(str_replace('_', ' ', $row->status)));
-            $sheet->setCellValue('L' . $r, $row->submitted_at ? date('d/m/Y', strtotime($row->submitted_at)) : '-');
+            $sheet->setCellValue('G' . $r, $row->jurusan1 ?? '-');
+            $sheet->setCellValue('H' . $r, $row->jurusan2 ?? '-');
+            $sheet->setCellValue('I' . $r, $row->jurusan_diterima ?? '-');
+            $sheet->setCellValue('J' . $r, ucwords(str_replace('_', ' ', $row->status)));
+            $sheet->setCellValue('K' . $r, $row->submitted_at ? date('d/m/Y', strtotime($row->submitted_at)) : '-');
         }
         $sheet->freezePane('A2');
 

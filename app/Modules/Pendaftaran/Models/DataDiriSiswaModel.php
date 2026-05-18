@@ -11,7 +11,6 @@ class DataDiriSiswaModel extends Model
     protected $returnType    = 'object';
     protected $useTimestamps = true;
 
-    // FIXED: tambah 'dusun' dan 'status_anak' yang sebelumnya tidak ada
     protected $allowedFields = [
         'pendaftaran_id', 'nik', 'nisn', 'nama_lengkap', 'nama_panggilan',
         'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'agama', 'kewarganegaraan',
@@ -19,10 +18,10 @@ class DataDiriSiswaModel extends Model
         'alamat', 'dusun', 'rt', 'rw', 'kelurahan',
         'kecamatan', 'kabupaten', 'provinsi', 'kode_pos',
         'no_hp', 'email_siswa',
-        'asal_sekolah', 'alamat_sekolah', 'npsn_sekolah', 'tahun_lulus', 'nilai_rata_rata',
+        'asal_sekolah', 'alamat_sekolah', 'tahun_lulus',
         'nama_ayah', 'pekerjaan_ayah', 'pendidikan_ayah', 'penghasilan_ayah',
         'nama_ibu', 'pekerjaan_ibu', 'pendidikan_ibu', 'penghasilan_ibu',
-        'no_hp_ortu','no_hp_ibu', 'nama_wali', 'no_hp_wali', 'foto_path',
+        'no_hp_ortu', 'no_hp_ibu', 'nama_wali', 'no_hp_wali', 'foto_path',
     ];
 
     public function getByPendaftaranId(int $pendaftaranId): ?object
@@ -32,7 +31,7 @@ class DataDiriSiswaModel extends Model
 
     public function upsert(int $pendaftaranId, array $data): bool
     {
-        $existing              = $this->getByPendaftaranId($pendaftaranId);
+        $existing               = $this->getByPendaftaranId($pendaftaranId);
         $data['pendaftaran_id'] = $pendaftaranId;
 
         if ($existing) {

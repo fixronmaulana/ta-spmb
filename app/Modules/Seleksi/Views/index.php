@@ -111,7 +111,6 @@
                         <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Nama</th>
                         <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Jurusan</th>
                         <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Status</th>
-                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Nilai</th>
                         <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Aksi</th>
                     </tr>
                 </thead>
@@ -162,11 +161,6 @@
                                         Terverifikasi
                                     </span>
                                 <?php endif; ?>
-                            </td>
-
-                            <!-- Nilai -->
-                            <td class="py-3 px-4 font-medium text-gray-900">
-                                <?= number_format($p->nilai_rata_rata ?? 0, 1) ?>
                             </td>
 
                             <!-- Aksi individual -->

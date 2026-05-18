@@ -17,7 +17,7 @@ class SeleksiModel extends Model
                 pendaftaran.id, pendaftaran.status, pendaftaran.user_id,
                 pendaftaran.jurusan_pilihan1_id, pendaftaran.jurusan_pilihan2_id,
                 pendaftaran.jurusan_diterima_id, pendaftaran.no_pendaftaran,
-                dds.nama_lengkap, dds.nisn, dds.nilai_rata_rata, dds.asal_sekolah,
+                dds.nama_lengkap, dds.nisn, dds.asal_sekolah,
                 dds.jenis_kelamin, dds.tanggal_lahir,
                 j1.nama as jurusan_pilihan1_nama, j1.kode as jurusan_pilihan1_kode, j1.kuota as kuota1,
                 j2.nama as jurusan_pilihan2_nama, j2.kode as jurusan_pilihan2_kode,
@@ -30,7 +30,7 @@ class SeleksiModel extends Model
             ->join('jurusan j2',           'j2.id = pendaftaran.jurusan_pilihan2_id', 'left')
             ->join('jurusan jd',           'jd.id = pendaftaran.jurusan_diterima_id', 'left')
             ->whereIn('pendaftaran.status', ['seleksi', 'lulus', 'tidak_lulus'])
-            ->orderBy('dds.nilai_rata_rata', 'DESC')
+            ->orderBy('pendaftaran.created_at', 'ASC')
             ->findAll();
 
         foreach ($rows as $row) {

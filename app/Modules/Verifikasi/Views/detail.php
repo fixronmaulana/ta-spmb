@@ -154,7 +154,6 @@ $pendingDok  = $dokumenStats['pending'];
                         ['Alamat',          $d->alamat        ?? '-'],
                         ['Asal Sekolah',    $d->asal_sekolah  ?? '-'],
                         ['Tahun Lulus',     $d->tahun_lulus   ?? '-'],
-                        ['Nilai Rata-rata', $d->nilai_rata_rata ?? '-'],
                     ];
                     ?>
                     <?php foreach ($items as [$label, $val]): ?>
@@ -239,51 +238,52 @@ $pendingDok  = $dokumenStats['pending'];
 
                 <!-- Toolbar Bulk Action -->
                 <?php if (in_array($p->status, ['submitted', 'verifikasi']) && $totalDok > 0): ?>
-                <div class="px-5 py-2.5 flex items-center justify-between gap-3 flex-wrap"
-                    style="background:#f8fafc;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;">
-                    <div class="flex items-center gap-2.5">
-                        <input type="checkbox" id="checkAll"
-                            class="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                            style="accent-color:hsl(220,54%,20%);"
-                            @change="toggleSelectAll($event.target.checked)">
-                        <label for="checkAll" class="text-xs font-semibold text-gray-600 cursor-pointer select-none">
-                            Pilih Semua
-                        </label>
-                        <span x-show="selectedDocs.length > 0"
-                            class="text-xs text-gray-400"
-                            x-text="'(' + selectedDocs.length + ' dipilih)'"></span>
+                    <div class="px-5 py-2.5 flex items-center justify-between gap-3 flex-wrap"
+                        style="background:#f8fafc;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;">
+                        <div class="flex items-center gap-2.5">
+                            <input type="checkbox" id="checkAll"
+                                class="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                                style="accent-color:hsl(220,54%,20%);"
+                                @change="toggleSelectAll($event.target.checked)">
+                            <label for="checkAll" class="text-xs font-semibold text-gray-600 cursor-pointer select-none">
+                                Pilih Semua
+                            </label>
+                            <span x-show="selectedDocs.length > 0"
+                                class="text-xs text-gray-400"
+                                x-text="'(' + selectedDocs.length + ' dipilih)'"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button"
+                                x-show="selectedDocs.length > 0"
+                                @click="openBulkApprove()"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition"
+                                style="background:hsl(142,55%,38%);"
+                                onmouseover="this.style.background='hsl(142,55%,30%)'"
+                                onmouseout="this.style.background='hsl(142,55%,38%)'">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5" />
+                                </svg>
+                                Setujui Dipilih
+                            </button>
+                            <button type="button"
+                                x-show="selectedDocs.length > 0"
+                                @click="openBulkReject()"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition"
+                                style="background:hsl(0,60%,48%);"
+                                onmouseover="this.style.background='hsl(0,60%,40%)'"
+                                onmouseout="this.style.background='hsl(0,60%,48%)'">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                                Tolak Dipilih
+                            </button>
+                            <span x-show="selectedDocs.length === 0"
+                                class="text-xs italic" style="color:hsl(220,15%,65%);">
+                                Centang dokumen untuk aksi massal
+                            </span>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button"
-                            x-show="selectedDocs.length > 0"
-                            @click="openBulkApprove()"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition"
-                            style="background:hsl(142,55%,38%);"
-                            onmouseover="this.style.background='hsl(142,55%,30%)'"
-                            onmouseout="this.style.background='hsl(142,55%,38%)'">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                            Setujui Dipilih
-                        </button>
-                        <button type="button"
-                            x-show="selectedDocs.length > 0"
-                            @click="openBulkReject()"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition"
-                            style="background:hsl(0,60%,48%);"
-                            onmouseover="this.style.background='hsl(0,60%,40%)'"
-                            onmouseout="this.style.background='hsl(0,60%,48%)'">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                            Tolak Dipilih
-                        </button>
-                        <span x-show="selectedDocs.length === 0"
-                            class="text-xs italic" style="color:hsl(220,15%,65%);">
-                            Centang dokumen untuk aksi massal
-                        </span>
-                    </div>
-                </div>
                 <?php endif; ?>
 
                 <!-- Daftar Dokumen -->
@@ -302,15 +302,15 @@ $pendingDok  = $dokumenStats['pending'];
 
                             <!-- Checkbox Pilih -->
                             <?php if (in_array($p->status, ['submitted', 'verifikasi'])): ?>
-                            <div class="flex-shrink-0">
-                                <input type="checkbox"
-                                    :checked="selectedDocs.includes(<?= $dok->id ?>)"
-                                    @change="toggleDoc(<?= $dok->id ?>, $event.target.checked)"
-                                    class="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                                    style="accent-color:hsl(220,54%,20%);">
-                            </div>
+                                <div class="flex-shrink-0">
+                                    <input type="checkbox"
+                                        :checked="selectedDocs.includes(<?= $dok->id ?>)"
+                                        @change="toggleDoc(<?= $dok->id ?>, $event.target.checked)"
+                                        class="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                                        style="accent-color:hsl(220,54%,20%);">
+                                </div>
                             <?php else: ?>
-                            <div class="w-4 flex-shrink-0"></div>
+                                <div class="w-4 flex-shrink-0"></div>
                             <?php endif; ?>
 
                             <!-- Tombol Preview -->
@@ -979,8 +979,8 @@ $pendingDok  = $dokumenStats['pending'];
                 <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
                     style="background:hsl(142,71%,45%,.12);">
                     <svg class="w-6 h-6" style="color:hsl(142,60%,35%);" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
+                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
                     </svg>
                 </div>
                 <h3 class="text-base font-bold" style="color:hsl(220,54%,15%);">Setujui Dokumen Dipilih?</h3>
@@ -1002,12 +1002,12 @@ $pendingDok  = $dokumenStats['pending'];
                     onmouseover="this.style.background='hsl(142,60%,28%)'" onmouseout="this.style.background='hsl(142,60%,35%)'">
                     <template x-if="bulkLoading">
                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                         </svg>
                     </template>
                     <svg x-show="!bulkLoading" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path d="M20 6L9 17l-5-5"/>
+                        <path d="M20 6L9 17l-5-5" />
                     </svg>
                     <span x-text="bulkLoading ? 'Memproses...' : 'Ya, Setujui Semua'"></span>
                 </button>
@@ -1037,9 +1037,9 @@ $pendingDok  = $dokumenStats['pending'];
                 <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
                     style="background:hsl(0,72%,51%,.1);">
                     <svg class="w-6 h-6" style="color:hsl(0,55%,40%);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="15" y1="9" x2="9" y2="15"/>
-                        <line x1="9" y1="9" x2="15" y2="15"/>
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
                     </svg>
                 </div>
                 <h3 class="text-base font-bold" style="color:hsl(220,54%,15%);">Tolak Dokumen Dipilih?</h3>
@@ -1071,12 +1071,13 @@ $pendingDok  = $dokumenStats['pending'];
                     onmouseover="this.style.background='hsl(0,55%,32%)'" onmouseout="this.style.background='hsl(0,55%,40%)'">
                     <template x-if="bulkLoading">
                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                         </svg>
                     </template>
                     <svg x-show="!bulkLoading" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
                     <span x-text="bulkLoading ? 'Memproses...' : 'Tolak Dokumen Dipilih'"></span>
                 </button>
@@ -1251,8 +1252,9 @@ $pendingDok  = $dokumenStats['pending'];
                 let anyFail = false;
                 for (const id of this.selectedDocs) {
                     const res = await this._post(
-                        `<?= base_url('admin/verifikasi/') ?>${this.pendaftaranId}/approve-dokumen`,
-                        { dokumen_id: id }
+                        `<?= base_url('admin/verifikasi/') ?>${this.pendaftaranId}/approve-dokumen`, {
+                            dokumen_id: id
+                        }
                     );
                     const data = await res.json();
                     if (!data.success) anyFail = true;
@@ -1284,8 +1286,10 @@ $pendingDok  = $dokumenStats['pending'];
                 let anyFail = false;
                 for (const id of this.selectedDocs) {
                     const res = await this._post(
-                        `<?= base_url('admin/verifikasi/') ?>${this.pendaftaranId}/reject-dokumen`,
-                        { dokumen_id: id, catatan: this.bulkRejectCatatan }
+                        `<?= base_url('admin/verifikasi/') ?>${this.pendaftaranId}/reject-dokumen`, {
+                            dokumen_id: id,
+                            catatan: this.bulkRejectCatatan
+                        }
                     );
                     const data = await res.json();
                     if (!data.success) anyFail = true;
