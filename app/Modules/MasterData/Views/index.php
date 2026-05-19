@@ -368,6 +368,7 @@ $activeTab = session()->getFlashdata('active_tab') ?? 'jurusan';
                             <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Tanggal Mulai</th>
                             <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Tanggal Akhir</th>
                             <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Status</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">WhatsApp</th>
                             <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Aksi</th>
                         </tr>
                     </thead>
@@ -385,6 +386,36 @@ $activeTab = session()->getFlashdata('active_tab') ?? 'jurusan';
                                         </span>
                                         <?php if ($p->is_published): ?>
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">📢 Published</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="flex flex-col gap-1 min-w-[140px]">
+                                        <?php if (!empty($p->wa_grup_link)): ?>
+                                            <a href="<?= esc($p->wa_grup_link) ?>" target="_blank" rel="noopener"
+                                               class="inline-flex items-center gap-1 text-xs font-medium text-green-700 hover:text-green-900 transition-colors"
+                                               title="<?= esc($p->wa_grup_link) ?>">
+                                                <svg class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 32 32" fill="currentColor">
+                                                    <path d="M16 0C7.163 0 0 7.163 0 16c0 2.827.737 5.476 2.027 7.775L0 32l8.476-2.004A15.932 15.932 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm0 29.333a13.267 13.267 0 01-6.773-1.846l-.486-.288-5.027 1.188 1.21-4.906-.317-.504A13.267 13.267 0 012.667 16C2.667 8.636 8.636 2.667 16 2.667S29.333 8.636 29.333 16 23.364 29.333 16 29.333zm7.27-9.94c-.398-.2-2.353-1.16-2.717-1.293-.365-.133-.63-.2-.896.2-.265.397-1.03 1.293-1.26 1.56-.232.265-.464.298-.863.1-.398-.2-1.683-.62-3.204-1.977-1.185-1.056-1.984-2.36-2.217-2.758-.232-.397-.025-.612.174-.81.179-.177.398-.464.597-.696.2-.232.265-.397.398-.663.133-.265.066-.497-.033-.696-.1-.2-.896-2.16-1.228-2.957-.323-.775-.652-.67-.896-.682-.232-.01-.497-.013-.763-.013a1.464 1.464 0 00-1.06.497c-.364.397-1.393 1.36-1.393 3.317s1.426 3.847 1.625 4.112c.199.265 2.806 4.283 6.797 6.007.95.41 1.692.655 2.27.838.954.304 1.822.26 2.508.158.765-.114 2.353-.963 2.686-1.893.332-.93.332-1.726.232-1.893-.098-.166-.364-.265-.762-.464z"/>
+                                                </svg>
+                                                Link Grup WA
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-xs text-gray-400 italic">Belum diisi</span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($p->wa_cp_no)): ?>
+                                            <?php
+                                                $raw = preg_replace('/[^0-9]/', '', $p->wa_cp_no);
+                                                if (str_starts_with($raw, '0')) $raw = '62' . substr($raw, 1);
+                                                $cpLink = "https://wa.me/{$raw}";
+                                            ?>
+                                            <a href="<?= esc($cpLink) ?>" target="_blank" rel="noopener"
+                                               class="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-900 transition-colors">
+                                                <svg class="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                                                </svg>
+                                                <?= esc($p->wa_cp_no) ?>
+                                            </a>
                                         <?php endif; ?>
                                     </div>
                                 </td>
@@ -482,6 +513,55 @@ $activeTab = session()->getFlashdata('active_tab') ?? 'jurusan';
                                 class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
+                    <!-- ── Divider WhatsApp ── -->
+                    <div class="pt-1">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="flex-1 h-px bg-gray-200"></div>
+                            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                                <svg class="h-3.5 w-3.5 text-green-600" viewBox="0 0 32 32" fill="currentColor">
+                                    <path d="M16 0C7.163 0 0 7.163 0 16c0 2.827.737 5.476 2.027 7.775L0 32l8.476-2.004A15.932 15.932 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm7.27 19.393c-.398-.2-2.353-1.16-2.717-1.293-.365-.133-.63-.2-.896.2-.265.397-1.03 1.293-1.26 1.56-.232.265-.464.298-.863.1-.398-.2-1.683-.62-3.204-1.977-1.185-1.056-1.984-2.36-2.217-2.758-.232-.397-.025-.612.174-.81.179-.177.398-.464.597-.696.2-.232.265-.397.398-.663.133-.265.066-.497-.033-.696-.1-.2-.896-2.16-1.228-2.957-.323-.775-.652-.67-.896-.682-.232-.01-.497-.013-.763-.013a1.464 1.464 0 00-1.06.497c-.364.397-1.393 1.36-1.393 3.317s1.426 3.847 1.625 4.112c.199.265 2.806 4.283 6.797 6.007.95.41 1.692.655 2.27.838.954.304 1.822.26 2.508.158.765-.114 2.353-.963 2.686-1.893.332-.93.332-1.726.232-1.893-.098-.166-.364-.265-.762-.464z"/>
+                                </svg>
+                                WhatsApp
+                            </span>
+                            <div class="flex-1 h-px bg-gray-200"></div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="space-y-1.5">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Link Grup WhatsApp Pendaftar
+                                    <span class="text-gray-400 font-normal text-xs ml-1">(opsional)</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-mono select-none">https://</span>
+                                    <input type="url" name="wa_grup_link"
+                                           :value="item.wa_grup_link ?? ''"
+                                           placeholder="chat.whatsapp.com/xxxxxxxxxxxxxxx"
+                                           class="w-full pl-14 pr-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
+                                           autocomplete="off">
+                                </div>
+                                <p class="text-[11px] text-gray-400">Salin dari tombol "Undang Anggota" di grup WA. Contoh: <code class="bg-gray-100 px-1 rounded">https://chat.whatsapp.com/AbC123...</code></p>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    No. WhatsApp Contact Person Panitia
+                                    <span class="text-gray-400 font-normal text-xs ml-1">(opsional)</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 select-none">+62</span>
+                                    <input type="tel" name="wa_cp_no"
+                                           :value="item.wa_cp_no ?? ''"
+                                           placeholder="08123456789"
+                                           maxlength="16"
+                                           class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                           autocomplete="off">
+                                </div>
+                                <p class="text-[11px] text-gray-400">Gunakan format <code class="bg-gray-100 px-1 rounded">08xxx</code> atau <code class="bg-gray-100 px-1 rounded">628xxx</code>. Nomor ini akan tampil di halaman sukses & status pendaftar.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <label class="flex items-center gap-3 cursor-pointer select-none">
                         <div class="relative">
                             <input type="checkbox" name="set_aktif" value="1" :checked="item.is_active == 1" class="sr-only peer">

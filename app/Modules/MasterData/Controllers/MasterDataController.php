@@ -130,6 +130,9 @@ class MasterDataController extends BaseController
             'tanggal_daftar_ulang_mulai'   => $this->request->getPost('tanggal_daftar_ulang_mulai') ?: null,
             'tanggal_daftar_ulang_selesai' => $this->request->getPost('tanggal_daftar_ulang_selesai') ?: null,
             'deskripsi'                    => $this->request->getPost('deskripsi') ?? '',
+            // ── WhatsApp per-periode ────────────────────────────
+            'wa_grup_link'                 => trim($this->request->getPost('wa_grup_link') ?? '') ?: null,
+            'wa_cp_no'                     => trim($this->request->getPost('wa_cp_no') ?? '') ?: null,
         ];
 
         if ($id) {

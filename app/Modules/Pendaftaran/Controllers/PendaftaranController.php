@@ -5,6 +5,7 @@ namespace App\Modules\Pendaftaran\Controllers;
 use App\Controllers\BaseController;
 use App\Libraries\FileUploader;
 use App\Modules\MasterData\Models\JurusanModel;
+use App\Modules\MasterData\Models\PeriodeModel;
 use App\Modules\Pendaftaran\Models\DataDiriSiswaModel;
 use App\Modules\Pendaftaran\Models\DokumenModel;
 use App\Modules\Pendaftaran\Models\PendaftaranModel;
@@ -427,14 +428,11 @@ class PendaftaranController extends BaseController
 
         $dataDiri = $this->dataDiriModel->getByPendaftaranId($pendaftaran->id);
 
-        // Ambil config WA dari env
-        $waGrupLink   = env('WA_GRUP_LINK', '#');
-        $waKontakNo   = env('WA_KONTAK_NO', '0812-xxxx-xxxx');
-        $waKontakNoRaw = preg_replace('/[^0-9]/', '', $waKontakNo);
-        if (str_starts_with($waKontakNoRaw, '0')) {
-            $waKontakNoRaw = '62' . substr($waKontakNoRaw, 1);
-        }
-        $waKontakLink = "https://wa.me/{$waKontakNoRaw}";
+        // Ambil config WA dari periode aktif (dinamis per-periode)
+        $periodeModel = new PeriodeModel();
+        $waGrupLink   = $periodeModel->getWaGrupLink();
+        $waKontakNo   = $periodeModel->getWaCpNo();
+        $waKontakLink = $periodeModel->getWaCpLink();
 
         $data = [
             'title'        => 'Pendaftaran Berhasil Dikirim',
@@ -464,14 +462,11 @@ class PendaftaranController extends BaseController
         $dataDiri    = $this->dataDiriModel->getByPendaftaranId($pendaftaran->id);
         $dokumens    = $this->dokumenModel->getByPendaftaranId($pendaftaran->id);
 
-        // Ambil config WA dari env
-        $waGrupLink    = env('WA_GRUP_LINK', '#');
-        $waKontakNo    = env('WA_KONTAK_NO', '0812-xxxx-xxxx');
-        $waKontakNoRaw = preg_replace('/[^0-9]/', '', $waKontakNo);
-        if (str_starts_with($waKontakNoRaw, '0')) {
-            $waKontakNoRaw = '62' . substr($waKontakNoRaw, 1);
-        }
-        $waKontakLink = "https://wa.me/{$waKontakNoRaw}";
+        // Ambil config WA dari periode aktif (dinamis per-periode)
+        $periodeModel = new PeriodeModel();
+        $waGrupLink   = $periodeModel->getWaGrupLink();
+        $waKontakNo   = $periodeModel->getWaCpNo();
+        $waKontakLink = $periodeModel->getWaCpLink();
 
         $data = [
             'title'        => 'Status Pendaftaran',
