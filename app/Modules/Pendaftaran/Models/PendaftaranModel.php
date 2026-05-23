@@ -137,13 +137,67 @@ class PendaftaranModel extends Model
         return $rows ?: [];
     }
 
-    public function getPendaftaranTerbaru(int $limit = 10): array
+    public function getPendaftaranTerbaru(int $limit = 10, ?int $periodeId = null): array
     {
-        return $this->select('pendaftaran.*, u.nama_lengkap as nama_calon, u.email as email_calon')
-            ->join('users u', 'u.id = pendaftaran.user_id')
+        $q = $this->select('pendaftaran.*, u.nama_lengkap as nama_calon, u.email as email_calon,
+                j1.kode as jurusan_pilihan1_kode, j1.nama as jurusan_pilihan1_nama')
+            ->join('users u',    'u.id = pendaftaran.user_id')
+            ->join('jurusan j1', 'j1.id = pendaftaran.jurusan_pilihan1_id', 'left')
             ->orderBy('pendaftaran.created_at', 'DESC')
-            ->limit($limit)
-            ->findAll();
+            ->limit($limit);
+
+        if ($periodeId !== null) {
+            $q->where('pendaftaran.periode_id', $periodeId);
+        }
+
+        return $q->findAll();
+    }
+
+    /**
+     * Statistik per status, difilter opsional per periode.
+     */
+    public function getStatistikByStatusPerPeriode(?int $periodeId = null): array
+    {
+        $statuses = ['draft', 'submitted', 'verifikasi', 'seleksi', 'lulus', 'tidak_lulus', 'daftar_ulang', 'siswa_aktif'];
+        $result   = array_fill_keys($statuses, 0);
+        $result['total'] = 0;
+
+        $q = $this->select('status, COUNT(*) as jumlah')->groupBy('status');
+        if ($periodeId !== null) {
+            $q->where('periode_id', $periodeId);
+        }
+
+        foreach ($q->findAll() as $row) {
+            $result[$row->status]  = (int) $row->jumlah;
+            $result['total']      += (int) $row->jumlah;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Stats per jurusan, difilter opsional per periode.
+     */
+    public function getStatsByJurusanPerPeriode(?int $periodeId = null): array
+    {
+        $q = $this->select('
+                jurusan.id       AS jurusan_id,
+                jurusan.nama     AS jurusan,
+                jurusan.kode,
+                jurusan.kuota,
+                COUNT(pendaftaran.id) AS total_daftar,
+                SUM(CASE WHEN pendaftaran.status = "lulus"        THEN 1 ELSE 0 END) AS total_lulus,
+                SUM(CASE WHEN pendaftaran.status = "daftar_ulang" THEN 1 ELSE 0 END) AS total_daftar_ulang,
+                SUM(CASE WHEN pendaftaran.status = "siswa_aktif"  THEN 1 ELSE 0 END) AS total_siswa_aktif
+            ')
+            ->join('jurusan', 'jurusan.id = pendaftaran.jurusan_pilihan1_id', 'right')
+            ->groupBy('jurusan.id');
+
+        if ($periodeId !== null) {
+            $q->where('pendaftaran.periode_id', $periodeId);
+        }
+
+        return $q->findAll();
     }
 
     public function getPaginatedByStatus(string $status, int $perPage = 20): array

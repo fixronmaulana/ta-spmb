@@ -1,14 +1,44 @@
 <!-- 
     File: app/Modules/Dashboard/Views/admin_tu.php
-    Sesuaikan dengan mockup React AdminDashboardPage
+    Updated: Tambah filter periode + tampilkan data terbaru sesuai periode
 -->
 
 <div class="space-y-6">
 
-    <!-- ── Page Header ──────────────────────────────────────────── -->
-    <div>
-        <h1 class="text-2xl font-bold font-serif">Dashboard Admin TU</h1>
-        <p class="text-sm text-gray-500">Overview pendaftaran SPMB 2026/2027</p>
+    <!-- ── Page Header + Filter Periode ────────────────────────── -->
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold font-serif">Dashboard Admin TU</h1>
+            <p class="text-sm text-gray-500">
+                <?php if ($periodeTerpilih): ?>
+                    Data periode: <span class="font-medium text-gray-700"><?= esc($periodeTerpilih->nama) ?></span>
+                    (<?= date('d M Y', strtotime($periodeTerpilih->tanggal_mulai)) ?>
+                    – <?= date('d M Y', strtotime($periodeTerpilih->tanggal_selesai)) ?>)
+                    <?php if ($periodeTerpilih->is_active): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 ml-1">Aktif</span>
+                    <?php endif; ?>
+                <?php else: ?>
+                    Semua periode
+                <?php endif; ?>
+            </p>
+        </div>
+
+        <!-- Dropdown Filter Periode -->
+        <form method="get" action="" class="flex items-center gap-2 flex-shrink-0">
+            <label for="periode_id" class="text-sm font-medium text-gray-700 whitespace-nowrap">Filter Periode:</label>
+            <select
+                id="periode_id"
+                name="periode_id"
+                onchange="this.form.submit()"
+                class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="0" <?= $periodeIdFilter === 0 ? 'selected' : '' ?>>Semua Periode</option>
+                <?php foreach ($allPeriode as $p): ?>
+                    <option value="<?= $p->id ?>" <?= $periodeIdFilter === (int)$p->id ? 'selected' : '' ?>>
+                        <?= esc($p->nama) ?><?= $p->is_active ? ' ★' : '' ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </form>
     </div>
 
     <!-- ── Stats Cards ──────────────────────────────────────────── -->
@@ -109,22 +139,29 @@
 
     <!-- ── Pendaftar Terbaru Table ──────────────────────────────── -->
     <div class="bg-white rounded-2xl border border-gray-200">
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 class="font-semibold text-gray-900">Pendaftar Terbaru</h3>
+        <div class="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h3 class="font-semibold text-gray-900">Pendaftar Terbaru</h3>
+                <p class="text-xs text-gray-400 mt-0.5">
+                    Menampilkan 10 pendaftar terbaru
+                    <?= $periodeTerpilih ? 'pada periode ' . esc($periodeTerpilih->nama) : 'dari semua periode' ?>
+                </p>
+            </div>
             <a href="<?= base_url('admin/verifikasi') ?>"
-                class="inline-flex items-center border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                class="inline-flex items-center border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors self-start sm:self-auto">
                 Lihat Semua
             </a>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[550px]">
+            <table class="w-full min-w-[600px]">
                 <thead>
-                    <tr class="border-b border-gray-100">
-                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">No. Pendaftaran</th>
-                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Nama</th>
-                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Jurusan</th>
-                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
-                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Aksi</th>
+                    <tr class="border-b border-gray-100 bg-gray-50/50">
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">No. Pendaftaran</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama Calon Siswa</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Jurusan</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tgl Daftar</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -133,11 +170,15 @@
                             <td class="py-3 px-4 font-mono text-sm text-gray-600">
                                 <?= esc($row->no_pendaftaran ?? '-') ?>
                             </td>
-                            <td class="py-3 px-4 font-medium text-gray-900">
-                                <?= esc($row->nama_calon) ?>
+                            <td class="py-3 px-4">
+                                <p class="font-medium text-gray-900 text-sm"><?= esc($row->nama_calon) ?></p>
+                                <p class="text-xs text-gray-400"><?= esc($row->email_calon ?? '') ?></p>
                             </td>
                             <td class="py-3 px-4 text-sm text-gray-700">
-                                <?= esc($row->jurusan_pilihan1_kode ?? $row->kode ?? '-') ?>
+                                <?= esc($row->jurusan_pilihan1_kode ?? '-') ?>
+                            </td>
+                            <td class="py-3 px-4 text-sm text-gray-500">
+                                <?= $row->created_at ? date('d M Y', strtotime($row->created_at)) : '-' ?>
                             </td>
                             <td class="py-3 px-4">
                                 <?= status_label($row->status) ?>
@@ -152,8 +193,13 @@
                     <?php endforeach; ?>
                     <?php if (empty($pendaftaranTerbaru)): ?>
                         <tr>
-                            <td colspan="5" class="py-10 text-center text-sm text-gray-400">
-                                Belum ada pendaftaran
+                            <td colspan="6" class="py-12 text-center">
+                                <div class="flex flex-col items-center gap-2">
+                                    <svg class="h-10 w-10 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    </svg>
+                                    <p class="text-sm text-gray-400">Belum ada pendaftaran pada periode ini</p>
+                                </div>
                             </td>
                         </tr>
                     <?php endif; ?>
@@ -203,16 +249,14 @@
 <!-- ── Chart.js Scripts ──────────────────────────────────────────── -->
 <script>
     (function() {
-        // Warna chart mengikuti pola hsl(var(--chart-N)) dari mockup React
         const CHART_COLORS = [
-            '#1e40af', // chart-1
-            '#d97706', // chart-2
-            '#059669', // chart-3
-            '#7c3aed', // chart-4
-            '#0891b2', // chart-5
+            '#1e40af',
+            '#d97706',
+            '#059669',
+            '#7c3aed',
+            '#0891b2',
         ];
 
-        // Data dari PHP
         const statsByJurusan = <?= json_encode(array_map(function ($row) {
                                     return [
                                         'kode'         => $row->kode ?? '',
@@ -242,10 +286,18 @@
                     datasets: [{
                         label: 'Pendaftar',
                         data: statsByJurusan.map(j => j.total_daftar),
-                        // Tiap bar punya warna sendiri — sesuai mockup (fill per entry)
                         backgroundColor: statsByJurusan.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
                         borderRadius: 4,
                         borderSkipped: false,
+                    }, {
+                        label: 'Kuota',
+                        data: statsByJurusan.map(j => j.kuota),
+                        backgroundColor: 'rgba(156,163,175,0.25)',
+                        borderColor: '#9ca3af',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        type: 'bar',
                     }]
                 },
                 options: {
@@ -253,7 +305,14 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                boxWidth: 12,
+                                font: {
+                                    size: 11
+                                }
+                            }
                         },
                         tooltip: {
                             ...tooltipDefaults,
@@ -262,7 +321,7 @@
                                     return statsByJurusan[items[0].dataIndex]?.jurusan || items[0].label;
                                 },
                                 label(item) {
-                                    return ` ${item.raw} pendaftar`;
+                                    return ` ${item.dataset.label}: ${item.raw}`;
                                 }
                             }
                         }
@@ -289,7 +348,7 @@
                                     size: 12
                                 }
                             },
-                            beginAtZero: true,
+                            beginAtZero: true
                         }
                     }
                 }
@@ -297,7 +356,6 @@
         }
 
         // ── Donut/Pie Chart ────────────────────────────────────────────
-        // Sesuai mockup: label langsung di slice "NAME (XX%)"
         const pieCtx = document.getElementById('pieChartDistribusi');
         if (pieCtx && statsByJurusan.length > 0) {
             const total = statsByJurusan.reduce((s, j) => s + j.total_daftar, 0);
@@ -315,7 +373,6 @@
                     }]
                 },
                 plugins: [{
-                    // Plugin inline untuk render label teks di atas slice
                     id: 'pieLabels',
                     afterDatasetDraw(chart) {
                         const {
@@ -349,7 +406,14 @@
                     cutout: '55%',
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: {
+                                    size: 11
+                                }
+                            }
                         },
                         tooltip: {
                             ...tooltipDefaults,
@@ -366,6 +430,13 @@
                     }
                 }
             });
+        } else if (pieCtx) {
+            // Tampilkan pesan kosong jika tidak ada data
+            const ctx2d = pieCtx.getContext('2d');
+            ctx2d.fillStyle = '#9ca3af';
+            ctx2d.font = '14px sans-serif';
+            ctx2d.textAlign = 'center';
+            ctx2d.fillText('Belum ada data untuk periode ini', pieCtx.width / 2, pieCtx.height / 2);
         }
     })();
 </script>

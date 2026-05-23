@@ -46,12 +46,36 @@ class DashboardController extends BaseController
     {
         $pendaftaranM = new PendaftaranModel();
         $notifikasiM  = new NotifikasiModel();
+        $periodeM     = new PeriodeModel();
 
-        $stats              = $pendaftaranM->getStatistikByStatus();
-        $pendaftaranTerbaru = $pendaftaranM->getPendaftaranTerbaru(10);
-        $needVerifikasi     = $pendaftaranM->countByStatus('submitted');
+        // Ambil semua periode untuk dropdown filter
+        $allPeriode   = $periodeM->orderBy('tanggal_mulai', 'DESC')->findAll();
+        $periodeAktif = $periodeM->getPeriodeAktif();
+
+        // Periode yang dipilih: dari query string, default ke periode aktif
+        $periodeIdFilter = (int) ($this->request->getGet('periode_id') ?? 0);
+        if ($periodeIdFilter === 0 && $periodeAktif) {
+            $periodeIdFilter = (int) $periodeAktif->id;
+        }
+        // null = tampilkan semua (jika tidak ada periode aktif maupun pilihan)
+        $filterParam = $periodeIdFilter > 0 ? $periodeIdFilter : null;
+
+        // Objek periode yang sedang difilter
+        $periodeTerpilih = null;
+        foreach ($allPeriode as $p) {
+            if ((int) $p->id === $periodeIdFilter) {
+                $periodeTerpilih = $p;
+                break;
+            }
+        }
+
+        $stats              = $pendaftaranM->getStatistikByStatusPerPeriode($filterParam);
+        $pendaftaranTerbaru = $pendaftaranM->getPendaftaranTerbaru(10, $filterParam);
+        $needVerifikasi     = $filterParam
+            ? $pendaftaranM->where('periode_id', $filterParam)->where('status', 'submitted')->countAllResults()
+            : $pendaftaranM->countByStatus('submitted');
         $unreadCount        = $notifikasiM->countUnread($this->userId());
-        $statsByJurusan     = $pendaftaranM->getStatsByJurusan();
+        $statsByJurusan     = $pendaftaranM->getStatsByJurusanPerPeriode($filterParam);
 
         return $this->render('App\Modules\Dashboard\Views\admin_tu', [
             'title'              => 'Dashboard Admin',
@@ -60,6 +84,11 @@ class DashboardController extends BaseController
             'needVerifikasi'     => $needVerifikasi,
             'unreadCount'        => $unreadCount,
             'statsByJurusan'     => $statsByJurusan,
+            // Filter periode
+            'allPeriode'         => $allPeriode,
+            'periodeAktif'       => $periodeAktif,
+            'periodeIdFilter'    => $periodeIdFilter,
+            'periodeTerpilih'    => $periodeTerpilih,
         ]);
     }
 
