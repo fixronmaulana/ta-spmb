@@ -48,15 +48,6 @@ $dokStatus = [
     'rejected' => ['label' => 'Perlu Perbaikan',     'dot' => 'hsl(0,72%,51%)',   'bg' => 'hsl(0,72%,51%,.1)', 'border' => 'hsl(0,72%,51%,.3)',   'icon' => 'x'],
 ];
 
-// ── Cek apakah ada dokumen rejected ─────────────────────────────────────────
-$hasRejected = false;
-$rejectedDocs = [];
-foreach ($dokumens as $dok) {
-    if ($dok->status_verifikasi === 'rejected') {
-        $hasRejected = true;
-        $rejectedDocs[] = $dok;
-    }
-}
 ?>
 
 <div class="max-w-4xl mx-auto space-y-6" x-data="statusModals()">
@@ -283,49 +274,7 @@ foreach ($dokumens as $dok) {
         </div>
     </div>
 
-    <!-- ══ CATATAN ADMIN (jika ada dokumen rejected) ═══════════════════════ -->
-    <?php if ($hasRejected): ?>
-        <div class="rounded-2xl p-5 animate-scale-in"
-            style="background:hsl(0,72%,51%,.06);border:1px solid hsl(0,72%,51%,.2);">
-            <div class="flex items-start gap-3">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5" style="color:hsl(0,55%,45%);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <div class="flex-1">
-                    <p class="font-semibold text-sm mb-2" style="color:hsl(0,55%,40%);">Catatan Admin — Perlu Perbaikan</p>
-                    <?php foreach ($rejectedDocs as $rd): ?>
-                        <div class="mt-2 pl-3" style="border-left:2px solid hsl(0,72%,51%,.4);">
-                            <p class="text-sm font-semibold" style="color:hsl(220,54%,15%);">
-                                <?= esc(jenis_dokumen_label($rd->jenis_dokumen)) ?>:
-                            </p>
-                            <p class="text-sm mt-0.5" style="color:hsl(220,15%,50%);">
-                                <?= esc($rd->catatan_verifikasi ?? 'Silakan upload ulang dokumen ini.') ?>
-                            </p>
-                        </div>
-                    <?php endforeach; ?>
 
-                    <!-- ✅ FIX: Tombol besar — buka modal upload, bukan redirect -->
-                    <?php if (in_array($p->status, ['verifikasi', 'revisi', 'submitted']) && ! empty($rejectedDocs)): ?>
-                        <button type="button"
-                            @click="openUpload('<?= esc($rejectedDocs[0]->jenis_dokumen) ?>', '<?= esc(jenis_dokumen_label($rejectedDocs[0]->jenis_dokumen)) ?>', '<?= esc(addslashes($rejectedDocs[0]->catatan_verifikasi ?? '')) ?>')"
-                            class="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-xl transition"
-                            style="background:hsl(0,55%,45%);"
-                            onmouseover="this.style.background='hsl(0,55%,38%)'"
-                            onmouseout="this.style.background='hsl(0,55%,45%)'">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <polyline points="16 16 12 12 8 16" />
-                                <line x1="12" y1="12" x2="12" y2="21" />
-                                <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3" />
-                            </svg>
-                            Upload Ulang Dokumen
-                        </button>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
 
     <!-- ══ CATATAN ADMIN / ALASAN PENOLAKAN (dari pendaftaran) ═══════════ -->
     <?php if (! empty($p->catatan_admin) || ! empty($p->alasan_penolakan)): ?>
