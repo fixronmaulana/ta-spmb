@@ -60,7 +60,8 @@ class PendaftaranController extends BaseController
 
         $dataDiri  = $this->dataDiriModel->getByPendaftaranId($pendaftaran->id);
         $dokumens  = $this->dokumenModel->getByPendaftaranId($pendaftaran->id);
-        $jurusans  = (new JurusanModel())->getAllActive();
+        $jurusanModel = new JurusanModel();
+        $jurusans  = $jurusanModel->getAllActiveWithKuota($pendaftaran->periode_id ?? null);
         $draftData = $this->pendaftaranModel->getDraft($pendaftaran->id, $stepNum);
 
         // ── Cek status verifikasi WA untuk step 1 ──────────────────

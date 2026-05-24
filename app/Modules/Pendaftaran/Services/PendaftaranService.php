@@ -2,6 +2,7 @@
 
 namespace App\Modules\Pendaftaran\Services;
 
+use App\Modules\MasterData\Models\JurusanModel;
 use App\Modules\MasterData\Models\PeriodeModel;
 use App\Modules\Notifikasi\Services\NotifikasiService;
 use App\Modules\Pendaftaran\Models\DataDiriSiswaModel;
@@ -15,6 +16,7 @@ class PendaftaranService
     protected DokumenModel       $dokumenModel;
     protected PeriodeModel       $periodeModel;
     protected NotifikasiService  $notifService;
+    protected JurusanModel       $jurusanModel;
 
     /** Cache field names agar tidak query berulang kali */
     private ?array $dataDiriFields = null;
@@ -26,6 +28,7 @@ class PendaftaranService
         $this->dokumenModel     = new DokumenModel();
         $this->periodeModel     = new PeriodeModel();
         $this->notifService     = new NotifikasiService();
+        $this->jurusanModel     = new JurusanModel();
     }
 
     public function getOrCreate(int $userId): object
@@ -133,31 +136,99 @@ class PendaftaranService
     }
 
     // =========================================================
-    // STEP 2 — Pilihan Jurusan
+    // STEP 2 — Pilihan Jurusan (dengan validasi kuota)
     // =========================================================
 
     public function saveStep2(int $pendaftaranId, array $data): array
     {
         try {
-            if (
-                ! empty($data['jurusan_pilihan2_id']) &&
-                ($data['jurusan_pilihan1_id'] ?? '') === ($data['jurusan_pilihan2_id'] ?? '')
-            ) {
+            $pilihan1 = $data['jurusan_pilihan1_id'] ?? null;
+            $pilihan2 = $data['jurusan_pilihan2_id'] ?? null;
+
+            // Pilihan 1 wajib diisi
+            if (empty($pilihan1)) {
+                return ['success' => false, 'message' => 'Pilihan jurusan pertama wajib dipilih.'];
+            }
+
+            // Pilihan 1 dan 2 tidak boleh sama
+            if (! empty($pilihan2) && (string) $pilihan1 === (string) $pilihan2) {
                 return ['success' => false, 'message' => 'Pilihan jurusan 1 dan 2 tidak boleh sama.'];
             }
 
+            // ── Ambil periode aktif untuk filter kuota ──────────────
+            $pendaftaran = $this->pendaftaranModel->find($pendaftaranId);
+            $periodeId   = $pendaftaran->periode_id ?? null;
+
+            // ── Cek kuota pilihan 1 ──────────────────────────────────
+            $jurusan1 = $this->jurusanModel->find((int) $pilihan1);
+            if (! $jurusan1) {
+                return ['success' => false, 'message' => 'Jurusan pilihan pertama tidak ditemukan.'];
+            }
+
+            // Hitung sisa kuota — kecualikan pendaftaran SAAT INI
+            // agar pendaftar yang mengedit ulang step2 tidak memblokir dirinya sendiri
+            $terpakai1 = $this->getTerpakaiExclude((int) $pilihan1, $periodeId, $pendaftaranId);
+            $sisa1     = max(0, (int) $jurusan1->kuota - $terpakai1);
+
+            if ($sisa1 <= 0) {
+                return [
+                    'success' => false,
+                    'message' => "Maaf, kuota jurusan \"{$jurusan1->nama}\" sudah penuh ({$jurusan1->kuota}/{$jurusan1->kuota} slot terisi). Silakan pilih jurusan lain.",
+                ];
+            }
+
+            // ── Cek kuota pilihan 2 (jika diisi) ────────────────────
+            if (! empty($pilihan2)) {
+                $jurusan2 = $this->jurusanModel->find((int) $pilihan2);
+                if (! $jurusan2) {
+                    return ['success' => false, 'message' => 'Jurusan pilihan kedua tidak ditemukan.'];
+                }
+
+                $terpakai2 = $this->getTerpakaiExclude((int) $pilihan2, $periodeId, $pendaftaranId);
+                $sisa2     = max(0, (int) $jurusan2->kuota - $terpakai2);
+
+                if ($sisa2 <= 0) {
+                    return [
+                        'success' => false,
+                        'message' => "Jurusan pilihan kedua \"{$jurusan2->nama}\" sudah penuh. Pilih jurusan lain atau kosongkan pilihan kedua.",
+                    ];
+                }
+            }
+
+            // ── Semua OK, simpan ─────────────────────────────────────
             $current = $this->pendaftaranModel->find($pendaftaranId);
             $this->pendaftaranModel->update($pendaftaranId, [
-                'jurusan_pilihan1_id' => $data['jurusan_pilihan1_id'] ?? null,
-                'jurusan_pilihan2_id' => $data['jurusan_pilihan2_id'] ?? null,
+                'jurusan_pilihan1_id' => $pilihan1,
+                'jurusan_pilihan2_id' => ! empty($pilihan2) ? $pilihan2 : null,
                 'step_terakhir'       => max(3, $current->step_terakhir ?? 2),
             ]);
             $this->pendaftaranModel->saveDraft($pendaftaranId, $data, 2);
+
             return ['success' => true];
         } catch (\Exception $e) {
             log_message('error', 'PendaftaranService::saveStep2 - ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Hitung terpakai dari jurusan tertentu, kecuali pendaftaran dengan ID tertentu.
+     * Digunakan agar edit ulang step2 tidak memblokir pendaftar yang bersangkutan.
+     */
+    private function getTerpakaiExclude(int $jurusanId, ?int $periodeId, int $excludePendaftaranId): int
+    {
+        $db      = db_connect();
+        $builder = $db->table('pendaftaran')
+            ->where('jurusan_pilihan1_id', $jurusanId)
+            ->whereIn('status', ['submitted', 'verifikasi', 'revisi', 'seleksi', 'lulus', 'daftar_ulang', 'siswa_aktif'])
+            ->where('deleted_at IS NULL')
+            ->where('id !=', $excludePendaftaranId);
+
+        if ($periodeId !== null) {
+            $builder->where('periode_id', $periodeId);
+        }
+
+        return (int) $builder->countAllResults();
     }
 
     // =========================================================
@@ -273,7 +344,25 @@ class PendaftaranService
             ];
         }
 
-        // Proses submit
+        // ── Validasi kuota final saat submit (server-side guard) ────
+        $periodeId = $pendaftaran->periode_id ?? null;
+        $jurusan1  = $this->jurusanModel->find((int) $pendaftaran->jurusan_pilihan1_id);
+        if ($jurusan1) {
+            $terpakai = $this->getTerpakaiExclude(
+                (int) $pendaftaran->jurusan_pilihan1_id,
+                $periodeId,
+                $pendaftaranId
+            );
+            $sisa = max(0, (int) $jurusan1->kuota - $terpakai);
+
+            if ($sisa <= 0) {
+                return [
+                    'success' => false,
+                    'message' => "Kuota jurusan \"{$jurusan1->nama}\" sudah penuh saat formulir ini disubmit. "
+                        . "Silakan kembali ke Step 2 dan pilih jurusan lain.",
+                ];
+            }
+        }
         $this->pendaftaranModel->submitPendaftaran($pendaftaranId);
         $pendaftaran = $this->pendaftaranModel->find($pendaftaranId);
 

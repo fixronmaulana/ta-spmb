@@ -2,13 +2,27 @@
 
 /** @var object $pendaftaran */
 /** @var object|null $dataDiri */
-/** @var array $jurusans */
+/** @var array $jurusans  — tiap item memiliki ->terpakai, ->sisa_kuota, ->penuh */
 /** @var array $steps */
 /** @var int $currentStep */
 
 $d   = $dataDiri;
 $p   = $pendaftaran;
 $err = session()->getFlashdata('errors') ?? [];
+
+// Jurusan pilihan yang sudah tersimpan sebelumnya
+$savedPilihan1 = old('jurusan_pilihan1_id', $p->jurusan_pilihan1_id ?? '');
+$savedPilihan2 = old('jurusan_pilihan2_id', $p->jurusan_pilihan2_id ?? '');
+
+// Apakah semua jurusan sudah penuh?
+$adaYangTersedia = false;
+foreach ($jurusans as $j) {
+    // Jika jurusan ini sudah dipilih sebelumnya (edit), tetap tampil tersedia
+    if (! $j->penuh || (string)$j->id === (string)$savedPilihan1) {
+        $adaYangTersedia = true;
+        break;
+    }
+}
 ?>
 
 <div class="max-w-3xl mx-auto space-y-5" x-data="formStep2()" x-init="init()">
@@ -22,7 +36,6 @@ $err = session()->getFlashdata('errors') ?? [];
 
         <!-- Indikator draft real-time -->
         <div class="flex items-center text-sm flex-shrink-0" style="min-height:24px;">
-
             <span x-show="saveStatus === 'saving'" x-transition
                 class="flex items-center gap-1.5" style="color:hsl(220,15%,50%);">
                 <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -31,7 +44,6 @@ $err = session()->getFlashdata('errors') ?? [];
                 </svg>
                 Menyimpan…
             </span>
-
             <span x-show="saveStatus === 'saved'" x-transition
                 class="flex items-center gap-1.5" style="color:hsl(220,15%,50%);">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -40,7 +52,6 @@ $err = session()->getFlashdata('errors') ?? [];
                 </svg>
                 Tersimpan: <span class="font-medium ml-0.5" style="color:hsl(220,54%,20%);" x-text="lastSaved"></span>
             </span>
-
             <span x-show="saveStatus === 'error'" x-transition
                 class="flex items-center gap-1.5" style="color:hsl(0,60%,50%);">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -50,7 +61,6 @@ $err = session()->getFlashdata('errors') ?? [];
                 </svg>
                 Gagal menyimpan — coba lagi
             </span>
-
         </div>
     </div>
 
@@ -81,6 +91,7 @@ $err = session()->getFlashdata('errors') ?? [];
             class="px-6 py-6 space-y-6">
             <?= csrf_field() ?>
 
+            <!-- Info petunjuk -->
             <div class="flex items-start gap-3 p-4 rounded-xl"
                 style="background:hsl(220,54%,20%,0.05);border:1px solid hsl(220,54%,20%,0.12);">
                 <svg class="w-5 h-5 flex-shrink-0 mt-0.5" style="color:hsl(220,54%,20%);"
@@ -92,9 +103,31 @@ $err = session()->getFlashdata('errors') ?? [];
                 <p class="text-sm" style="color:hsl(220,54%,20%);">
                     Pilih <strong>2 program keahlian</strong> yang Anda minati. Jika kuota pilihan pertama penuh,
                     Anda akan dipertimbangkan untuk pilihan kedua.
+                    <strong>Jurusan yang sudah penuh tidak dapat dipilih.</strong>
                 </p>
             </div>
 
+            <!-- Peringatan jika semua jurusan penuh -->
+            <?php if (! $adaYangTersedia): ?>
+                <div class="flex items-start gap-3 p-4 rounded-xl"
+                    style="background:hsl(0,72%,51%,0.08);border:1px solid hsl(0,72%,51%,0.25);">
+                    <svg class="w-5 h-5 flex-shrink-0 mt-0.5" style="color:hsl(0,55%,45%);" fill="none"
+                        stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <div>
+                        <p class="text-sm font-semibold" style="color:hsl(0,55%,40%);">Semua Kuota Jurusan Sudah Penuh</p>
+                        <p class="text-sm mt-0.5" style="color:hsl(0,55%,45%);">
+                            Saat ini seluruh jurusan yang tersedia sudah mencapai batas kuota.
+                            Silakan hubungi panitia PPDB untuk informasi lebih lanjut.
+                        </p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Error validasi -->
             <?php if (isset($err['jurusan_pilihan1_id'])): ?>
                 <div class="flex items-center gap-2 p-3 rounded-xl"
                     style="background:hsl(0,72%,51%,0.08);border:1px solid hsl(0,72%,51%,0.2);">
@@ -107,7 +140,7 @@ $err = session()->getFlashdata('errors') ?? [];
                 </div>
             <?php endif; ?>
 
-            <!-- Jurusan Cards -->
+            <!-- ════ PILIHAN PERTAMA — Card list ════ -->
             <div>
                 <p class="text-sm font-semibold mb-3" style="color:hsl(220,54%,15%);">
                     Pilihan Pertama <span style="color:hsl(0,72%,51%);">*</span>
@@ -115,48 +148,98 @@ $err = session()->getFlashdata('errors') ?? [];
                 </p>
                 <div class="space-y-3" id="jurusan-cards">
                     <?php foreach ($jurusans as $idx => $j):
-                        $sel1 = old('jurusan_pilihan1_id', $p->jurusan_pilihan1_id ?? '') == $j->id;
+                        $sel1    = (string)$savedPilihan1 === (string)$j->id;
+                        $isPenuh = $j->penuh && ! $sel1; // bisa tetap pilih jika sudah terpilih sebelumnya
+                        $pct     = $j->kuota > 0 ? min(100, round($j->terpakai / $j->kuota * 100)) : 0;
                     ?>
-                        <div class="jurusan-card p-4 rounded-xl border-2 cursor-pointer transition-all select-none"
+                        <div class="jurusan-card rounded-xl border-2 transition-all select-none <?= $isPenuh ? 'opacity-60' : 'cursor-pointer' ?>"
                             data-id="<?= $j->id ?>"
-                            onclick="selectJurusan1(<?= $j->id ?>)"
-                            style="<?= $sel1 ? 'border-color:hsl(220,54%,20%);background:hsl(220,54%,20%,0.05);' : 'border-color:hsl(220,20%,88%);' ?>">
-                            <div class="flex items-center gap-4">
-                                <div class="w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 jurusan-check transition-all"
-                                    style="<?= $sel1 ? 'background:hsl(220,54%,20%);border-color:hsl(220,54%,20%);' : 'border-color:hsl(220,20%,72%);background:white;' ?>">
-                                    <svg class="w-3 h-3 text-white <?= $sel1 ? '' : 'hidden' ?>"
-                                        fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="text-xs font-bold px-2 py-0.5 rounded"
-                                            style="background:hsl(43,70%,47%,0.12);color:hsl(43,58%,33%);">
-                                            <?= esc($j->kode) ?>
-                                        </span>
-                                        <p class="text-sm font-semibold" style="color:hsl(220,54%,15%);">
-                                            <?= ($idx + 1) . '. ' . esc($j->nama) ?>
-                                        </p>
+                            data-penuh="<?= $isPenuh ? '1' : '0' ?>"
+                            <?= ! $isPenuh ? "onclick=\"selectJurusan1({$j->id})\"" : '' ?>
+                            style="<?= $sel1
+                                        ? 'border-color:hsl(220,54%,20%);background:hsl(220,54%,20%,0.05);'
+                                        : ($isPenuh
+                                            ? 'border-color:hsl(220,20%,85%);background:hsl(220,20%,97%);cursor:not-allowed;'
+                                            : 'border-color:hsl(220,20%,88%);') ?>">
+
+                            <div class="p-4">
+                                <div class="flex items-center gap-4">
+                                    <!-- Checkbox visual -->
+                                    <div class="w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 jurusan-check transition-all"
+                                        style="<?= $isPenuh
+                                                    ? 'background:hsl(220,20%,88%);border-color:hsl(220,20%,78%);'
+                                                    : ($sel1
+                                                        ? 'background:hsl(220,54%,20%);border-color:hsl(220,54%,20%);'
+                                                        : 'border-color:hsl(220,20%,72%);background:white;') ?>">
+                                        <?php if ($isPenuh): ?>
+                                            <!-- Icon X untuk penuh -->
+                                            <svg class="w-3 h-3" style="color:hsl(220,15%,55%);" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        <?php else: ?>
+                                            <svg class="w-3 h-3 text-white <?= $sel1 ? '' : 'hidden' ?>"
+                                                fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                                <polyline points="20 6 9 17 4 12" />
+                                            </svg>
+                                        <?php endif; ?>
                                     </div>
-                                    <p class="text-xs mt-0.5" style="color:hsl(220,15%,55%);">Kuota: <?= $j->kuota ?> siswa</p>
-                                </div>
-                                <div class="flex-shrink-0 jurusan-badge <?= $sel1 ? '' : 'hidden' ?>">
-                                    <svg class="w-5 h-5" style="color:hsl(220,54%,20%);" fill="none"
-                                        stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-                                        <polyline points="22 4 12 14.01 9 11.01" />
-                                    </svg>
+
+                                    <!-- Info jurusan -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="text-xs font-bold px-2 py-0.5 rounded"
+                                                style="background:hsl(43,70%,47%,0.12);color:hsl(43,58%,33%);">
+                                                <?= esc($j->kode) ?>
+                                            </span>
+                                            <p class="text-sm font-semibold" style="color:<?= $isPenuh ? 'hsl(220,15%,55%)' : 'hsl(220,54%,15%)' ?>;">
+                                                <?= ($idx + 1) . '. ' . esc($j->nama) ?>
+                                            </p>
+                                            <?php if ($isPenuh): ?>
+                                                <span class="text-xs font-bold px-2 py-0.5 rounded-full"
+                                                    style="background:hsl(0,72%,51%,0.1);color:hsl(0,55%,45%);border:1px solid hsl(0,72%,51%,0.25);">
+                                                    PENUH
+                                                </span>
+                                            <?php elseif ($j->sisa_kuota <= 5): ?>
+                                                <span class="text-xs font-bold px-2 py-0.5 rounded-full"
+                                                    style="background:hsl(38,92%,50%,0.1);color:hsl(38,60%,35%);border:1px solid hsl(38,92%,50%,0.3);">
+                                                    Sisa <?= $j->sisa_kuota ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <!-- Progress bar kuota -->
+                                        <div class="mt-2 flex items-center gap-2">
+                                            <div class="flex-1 h-1.5 rounded-full overflow-hidden"
+                                                style="background:hsl(220,20%,90%);">
+                                                <div class="h-full rounded-full transition-all"
+                                                    style="width:<?= $pct ?>%;background:<?= $isPenuh ? 'hsl(0,55%,50%)' : ($pct >= 80 ? 'hsl(38,80%,48%)' : 'hsl(142,60%,40%)') ?>;"></div>
+                                            </div>
+                                            <span class="text-xs whitespace-nowrap flex-shrink-0"
+                                                style="color:hsl(220,15%,55%);">
+                                                <?= $j->terpakai ?>/<?= $j->kuota ?> siswa
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Centang pilihan aktif -->
+                                    <div class="flex-shrink-0 jurusan-badge <?= $sel1 ? '' : 'hidden' ?>">
+                                        <svg class="w-5 h-5" style="color:hsl(220,54%,20%);" fill="none"
+                                            stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                                            <polyline points="22 4 12 14.01 9 11.01" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
                 <input type="hidden" name="jurusan_pilihan1_id" id="pilihan1_val"
-                    value="<?= old('jurusan_pilihan1_id', $p->jurusan_pilihan1_id ?? '') ?>">
+                    value="<?= esc($savedPilihan1) ?>">
             </div>
 
-            <!-- Pilihan Kedua -->
+            <!-- ════ PILIHAN KEDUA — Dropdown ════ -->
             <div>
                 <div class="flex items-center gap-3 mb-3">
                     <p class="text-sm font-semibold" style="color:hsl(220,54%,15%);">Pilihan Kedua</p>
@@ -168,12 +251,17 @@ $err = session()->getFlashdata('errors') ?? [];
                     <option value="">-- Tidak Ada Pilihan Kedua --</option>
                     <?php foreach ($jurusans as $j): ?>
                         <option value="<?= $j->id ?>"
-                            <?= old('jurusan_pilihan2_id', $p->jurusan_pilihan2_id ?? '') == $j->id ? 'selected' : '' ?>>
+                            <?= (string)$savedPilihan2 === (string)$j->id ? 'selected' : '' ?>
+                            <?= ($j->penuh && (string)$savedPilihan2 !== (string)$j->id) ? 'disabled' : '' ?>
+                            style="<?= ($j->penuh && (string)$savedPilihan2 !== (string)$j->id) ? 'color:hsl(220,15%,60%);' : '' ?>">
                             <?= esc($j->nama) ?> (<?= esc($j->kode) ?>)
+                            <?php if ($j->penuh): ?> — PENUH<?php elseif ($j->sisa_kuota <= 5): ?> — Sisa <?= $j->sisa_kuota ?><?php endif; ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <p class="text-xs mt-1.5" style="color:hsl(220,15%,55%);">Pilihan kedua tidak boleh sama dengan pilihan pertama</p>
+                <p class="text-xs mt-1.5" style="color:hsl(220,15%,55%);">
+                    Pilihan kedua tidak boleh sama dengan pilihan pertama. Jurusan yang sudah penuh tidak dapat dipilih.
+                </p>
             </div>
 
         </form>
@@ -224,28 +312,49 @@ $err = session()->getFlashdata('errors') ?? [];
                 <polyline points="9 18 15 12 9 6" />
             </svg>
         </button>
-
     </div>
 </div><!-- /wrapper -->
 
 <script>
     function selectJurusan1(id) {
+        // Abaikan jika jurusan penuh
+        const card = document.querySelector(`.jurusan-card[data-id="${id}"]`);
+        if (card && card.dataset.penuh === '1') return;
+
         document.getElementById('pilihan1_val').value = id;
-        document.querySelectorAll('.jurusan-card').forEach(card => {
-            const ok = parseInt(card.dataset.id) === id;
-            card.style.borderColor = ok ? 'hsl(220,54%,20%)' : 'hsl(220,20%,88%)';
-            card.style.background = ok ? 'hsl(220,54%,20%,0.05)' : '';
-            const chk = card.querySelector('.jurusan-check');
+        document.querySelectorAll('.jurusan-card').forEach(c => {
+            if (c.dataset.penuh === '1') return; // jangan ubah style kartu penuh
+            const ok = parseInt(c.dataset.id) === id;
+            c.style.borderColor = ok ? 'hsl(220,54%,20%)' : 'hsl(220,20%,88%)';
+            c.style.background = ok ? 'hsl(220,54%,20%,0.05)' : '';
+            const chk = c.querySelector('.jurusan-check');
             chk.style.background = ok ? 'hsl(220,54%,20%)' : 'white';
             chk.style.borderColor = ok ? 'hsl(220,54%,20%)' : 'hsl(220,20%,72%)';
             chk.querySelector('svg').classList.toggle('hidden', !ok);
-            card.querySelector('.jurusan-badge').classList.toggle('hidden', !ok);
+            c.querySelector('.jurusan-badge').classList.toggle('hidden', !ok);
+        });
+
+        // Disable opsi yang sama di pilihan kedua
+        const sel2 = document.getElementById('pilihan2');
+        Array.from(sel2.options).forEach(opt => {
+            if (!opt.value) return;
+            // Tetap disable jika penuh (attr disabled sudah dari PHP)
+            // Hanya update disabled untuk same-as-pilihan1 logic
+            const isPenuhPhp = opt.disabled && !opt._wasSameDisabled;
+            if (parseInt(opt.value) === id) {
+                opt.disabled = true;
+                opt._wasSameDisabled = true;
+            } else if (opt._wasSameDisabled) {
+                opt.disabled = isPenuhPhp;
+                opt._wasSameDisabled = false;
+            }
         });
     }
 
     function submitStep2() {
         const p1 = document.getElementById('pilihan1_val').value;
         const p2 = document.getElementById('pilihan2').value;
+
         if (!p1) {
             alert('Pilih jurusan pilihan pertama terlebih dahulu!');
             return;
@@ -257,25 +366,36 @@ $err = session()->getFlashdata('errors') ?? [];
         document.getElementById('step2-form').submit();
     }
 
-    // ── formStep2: autosave dengan waktu DEVICE ───────────────────────────
+    // ── formStep2: autosave ──────────────────────────────────────
     function formStep2() {
         return {
             saving: false,
-            saveStatus: '', // '' | 'saving' | 'saved' | 'error'
+            saveStatus: '',
             lastSaved: '',
 
             init() {
-                // Tampilkan jam DEVICE saat halaman dibuka jika ada data tersimpan
                 <?php if (!empty($pendaftaran->updated_at)): ?>
                     const pad = n => String(n).padStart(2, '0'),
                         now = new Date();
                     this.lastSaved = `${pad(now.getHours())}.${pad(now.getMinutes())}.${pad(now.getSeconds())}`;
                     this.saveStatus = 'saved';
                 <?php endif; ?>
+
+                // Sinkronisasi disable pilihan kedua sesuai pilihan pertama saat ini
+                const currentP1 = document.getElementById('pilihan1_val').value;
+                if (currentP1) {
+                    const sel2 = document.getElementById('pilihan2');
+                    Array.from(sel2.options).forEach(opt => {
+                        if (!opt.value) return;
+                        if (parseInt(opt.value) === parseInt(currentP1) && !opt.disabled) {
+                            opt.disabled = true;
+                            opt._wasSameDisabled = true;
+                        }
+                    });
+                }
             },
 
             async saveDraft() {
-                // Klik tombol → simpan SEKARANG, tanpa validasi, tanpa debounce
                 if (this.saving) return;
                 this.saving = true;
                 this.saveStatus = 'saving';
