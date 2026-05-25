@@ -30,7 +30,7 @@ $routes->group('auth', ['filter' => 'guest'], function ($routes) {
     $routes->get('forgot-password',  'App\Modules\Auth\Controllers\AuthController::forgotPassword');
     $routes->post('forgot-password', 'App\Modules\Auth\Controllers\AuthController::doForgotPassword');
     $routes->get('reset-password/(:segment)',  'App\Modules\Auth\Controllers\AuthController::resetPassword/$1');
-    $routes->post('reset-password/(:segment)', 'App\Modules\Auth\Controllers\AuthController::doResetPassword/$1');
+    $routes->post('reset-password',            'App\Modules\Auth\Controllers\AuthController::doResetPassword');
 });
 
 // Verifikasi OTP
