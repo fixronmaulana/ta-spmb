@@ -5,11 +5,6 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  *
- * PERUBAHAN:
- *  - Hapus 3 route approval kepsek (seleksi/approval, seleksi/approve, seleksi/revisi)
- *    dari group 'kepala-sekolah'. Admin TU sekarang langsung menetapkan kelulusan
- *    tanpa perlu persetujuan kepala sekolah.
- *  - Kepala sekolah tetap dapat mengakses dashboard monitoring dan laporan.
  */
 
 $routes->setDefaultNamespace('');
@@ -115,19 +110,27 @@ $routes->group('admin', ['filter' => 'auth:admin_tu'], function ($routes) {
     $routes->post('buku-induk/(:num)/kesehatan',        'App\Modules\BukuInduk\Controllers\BukuIndukController::updateKesehatan/$1');
     $routes->post('buku-induk/(:num)/kelas',            'App\Modules\BukuInduk\Controllers\BukuIndukController::updateKelas/$1');
 
-    // Master Data
+    // ── Master Data ─────────────────────────────────────────────────────────
     $routes->get('master-data',                                   'App\Modules\MasterData\Controllers\MasterDataController::index');
+
+    // Jurusan
     $routes->post('master-data/jurusan/simpan',                   'App\Modules\MasterData\Controllers\MasterDataController::simpanJurusan');
-    $routes->get('master-data/jurusan/(:num)/hapus',              'App\Modules\MasterData\Controllers\MasterDataController::hapusJurusan/$1');
+    $routes->post('master-data/jurusan/(:num)/hapus',             'App\Modules\MasterData\Controllers\MasterDataController::hapusJurusan/$1');
+
+    // Kelas
     $routes->post('master-data/kelas/simpan',                     'App\Modules\MasterData\Controllers\MasterDataController::simpanKelas');
+    $routes->post('master-data/kelas/(:num)/hapus',               'App\Modules\MasterData\Controllers\MasterDataController::hapusKelas/$1');
+
+    // Periode
     $routes->post('master-data/periode/simpan',                   'App\Modules\MasterData\Controllers\MasterDataController::simpanPeriode');
-    $routes->get('master-data/periode/(:num)/aktif',              'App\Modules\MasterData\Controllers\MasterDataController::setAktifPeriode/$1');
-    $routes->get('master-data/periode/(:num)/publish',            'App\Modules\MasterData\Controllers\MasterDataController::publishPeriode/$1');
-    $routes->get('master-data/kelas/(:num)/hapus',                'App\Modules\MasterData\Controllers\MasterDataController::hapusKelas/$1');
+    $routes->post('master-data/periode/(:num)/aktif',             'App\Modules\MasterData\Controllers\MasterDataController::setAktifPeriode/$1');
+    $routes->post('master-data/periode/(:num)/publish',           'App\Modules\MasterData\Controllers\MasterDataController::publishPeriode/$1');
+
+    // Dokumen
     $routes->post('master-data/dokumen/simpan',                   'App\Modules\MasterData\Controllers\MasterDataController::simpanJenisDokumen');
-    $routes->get('master-data/dokumen/(:num)/toggle',             'App\Modules\MasterData\Controllers\MasterDataController::toggleJenisDokumen/$1');
+    $routes->post('master-data/dokumen/(:num)/toggle',            'App\Modules\MasterData\Controllers\MasterDataController::toggleJenisDokumen/$1');
     $routes->post('master-data/dokumen/(:num)/toggle-wajib',      'App\Modules\MasterData\Controllers\MasterDataController::toggleWajibJenisDokumen/$1');
-    $routes->get('master-data/dokumen/(:num)/hapus',              'App\Modules\MasterData\Controllers\MasterDataController::hapusJenisDokumen/$1');
+    $routes->post('master-data/dokumen/(:num)/hapus',             'App\Modules\MasterData\Controllers\MasterDataController::hapusJenisDokumen/$1');
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
