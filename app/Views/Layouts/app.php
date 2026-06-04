@@ -422,6 +422,84 @@
         }
     </script>
 
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         LOGOUT CONFIRMATION MODAL
+         PERBAIKAN: Modal ini digunakan oleh semua role (calon_siswa,
+         admin_tu, kepala_sekolah) saat menekan tombol Logout di
+         sidebar desktop, sidebar mobile, maupun topbar dropdown.
+    ═══════════════════════════════════════════════════════════════ -->
+    <div id="logoutModal"
+        class="hidden fixed inset-0 z-[999] flex items-center justify-center"
+        style="background:rgba(0,0,0,0.45);font-family:'Plus Jakarta Sans',sans-serif;"
+        onclick="if(event.target===this) this.classList.add('hidden')">
+
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden"
+            style="animation: modalFadeIn .2s ease;">
+
+            <!-- Icon -->
+            <div class="flex justify-center pt-8 pb-2">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center"
+                    style="background:hsl(0,72%,51%,.1);">
+                    <svg class="w-8 h-8" style="color:hsl(0,72%,51%);" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Text -->
+            <div class="text-center px-6 pt-2 pb-6">
+                <h3 class="text-lg font-bold mb-2" style="color:hsl(220,54%,15%);">Konfirmasi Logout</h3>
+                <p class="text-sm" style="color:hsl(220,15%,45%);line-height:1.7;">
+                    Apakah Anda yakin ingin keluar dari sistem SPMB?
+                    Anda perlu login kembali untuk mengakses dashboard.
+                </p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-3 px-6 pb-6">
+                <!-- Batal -->
+                <button type="button"
+                    onclick="document.getElementById('logoutModal').classList.add('hidden')"
+                    class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors"
+                    style="border-color:hsl(220,54%,20%);color:hsl(220,54%,20%);background:white;"
+                    onmouseover="this.style.background='hsl(220,54%,20%,.08)'"
+                    onmouseout="this.style.background='white'">
+                    Batal
+                </button>
+
+                <!-- Ya, Logout -->
+                <form action="<?= base_url('auth/logout') ?>" method="post" class="flex-1">
+                    <?= csrf_field() ?>
+                    <button type="submit"
+                        class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+                        style="background:hsl(0,72%,51%);"
+                        onmouseover="this.style.background='hsl(0,72%,42%)'"
+                        onmouseout="this.style.background='hsl(0,72%,51%)'">
+                        Ya, Logout
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(.95) translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    </style>
+
     <?= $scripts ?? '' ?>
 </body>
 

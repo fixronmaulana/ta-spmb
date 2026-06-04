@@ -11,6 +11,8 @@
  *  - Urutkan menu sesuai mockup:
  *    Dashboard → Verifikasi Dokumen → Penetapan Kelulusan →
  *    Verifikasi Daftar Ulang → Data Master → Konversi Buku Induk → Buku Induk Siswa
+ *  - [SEMUA ROLE] Tombol logout di desktop sidebar, mobile sidebar
+ *    diganti menjadi trigger modal konfirmasi (tidak lagi submit form langsung)
  */
 
 $role    = session()->get('user_role');
@@ -55,16 +57,6 @@ if ($role === 'calon_siswa') {
         ['icon' => 'bell',             'label' => 'Notifikasi',            'url' => 'dashboard/notifikasi', 'badge' => $notifBadge],
     ];
 } elseif ($role === 'admin_tu') {
-    /**
-     * Sesuai mockup React AdminLayout.tsx (adminTuNavItems):
-     *   Dashboard
-     *   Verifikasi Dokumen
-     *   Penetapan Kelulusan
-     *   Verifikasi Daftar Ulang  ← BARU ditambahkan (icon: CreditCard)
-     *   Data Master
-     *   Konversi Buku Induk
-     *   Buku Induk Siswa
-     */
     $menuItems = [
         ['icon' => 'layout-dashboard', 'label' => 'Dashboard',                 'url' => 'admin'],
         ['icon' => 'file-check',       'label' => 'Verifikasi Dokumen',        'url' => 'admin/verifikasi'],
@@ -109,7 +101,6 @@ function isActive(string $url, string $current): bool
 function svgIcon(string $name, string $cls = 'w-5 h-5 flex-shrink-0'): string
 {
     $paths = [
-        // Existing icons
         'file-text'        => '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
         'clock'            => '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
         'megaphone'        => '<path d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>',
@@ -121,21 +112,14 @@ function svgIcon(string $name, string $cls = 'w-5 h-5 flex-shrink-0'): string
         'archive'          => '<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>',
         'log-out'          => '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
         'x'                => '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
-
-        // Dashboard layout icons
         'layout-dashboard' => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
         'file-edit'        => '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
         'bar-chart-3'      => '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>',
         'party-popper'     => '<path d="M5.8 11.3L2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="M22 2l-2.24.75a2.9 2.9 0 00-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="M22 13l-.82-.33c-.86-.34-1.82.2-1.98 1.11v0c-.11.7-.72 1.22-1.43 1.22H17"/><path d="M11 2l.33.82c.34.86-.2 1.82-1.11 1.98v0C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2z"/>',
         'file-check'       => '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/>',
-
-        // Admin icons
         'user-check'       => '<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/>',
         'users'            => '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
         'folder-archive'   => '<path d="M22 20V8a2 2 0 00-2-2h-7.93a2 2 0 01-1.66-.9l-.82-1.2A2 2 0 008.93 3H4a2 2 0 00-2 2v13a2 2 0 002 2z"/><path d="M16 19v-2"/><path d="M13 16h6"/><path d="M16 13v-2"/>',
-
-        // ── BARU: CreditCard — sesuai mockup React adminTuNavItems icon ───────
-        // Verifikasi Daftar Ulang (icon CreditCard dari lucide-react)
         'credit-card'      => '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
     ];
 
@@ -225,19 +209,18 @@ $badge = $roleBadge[$role] ?? ['label' => ucfirst($role ?? 'User'), 'bg' => 'hsl
             <?php endforeach; ?>
         </nav>
 
-        <!-- ── Logout ─────────────────────────────────────────────────── -->
+        <!-- ── Logout (Desktop) ────────────────────────────────────────── -->
+        <!-- PERBAIKAN: Tidak lagi submit form langsung, tapi memunculkan modal konfirmasi -->
         <div class="px-3 py-4" style="border-top:1px solid hsl(220,40%,25%);">
-            <form action="<?= base_url('auth/logout') ?>" method="post">
-                <?= csrf_field() ?>
-                <button type="submit"
-                    class="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
-                    style="color:hsl(220,20%,62%);"
-                    onmouseover="this.style.background='hsl(0,60%,40%,.14)'; this.style.color='hsl(0,72%,70%)';"
-                    onmouseout="this.style.background='transparent'; this.style.color='hsl(220,20%,62%)';">
-                    <span style="color:hsl(220,20%,50%);"><?= svgIcon('log-out') ?></span>
-                    Logout
-                </button>
-            </form>
+            <button type="button"
+                onclick="document.getElementById('logoutModal').classList.remove('hidden')"
+                class="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+                style="color:hsl(220,20%,62%);"
+                onmouseover="this.style.background='hsl(0,60%,40%,.14)'; this.style.color='hsl(0,72%,70%)';"
+                onmouseout="this.style.background='transparent'; this.style.color='hsl(220,20%,62%)';">
+                <span style="color:hsl(220,20%,50%);"><?= svgIcon('log-out') ?></span>
+                Logout
+            </button>
         </div>
 
     </div>
@@ -314,16 +297,15 @@ $badge = $roleBadge[$role] ?? ['label' => ucfirst($role ?? 'User'), 'bg' => 'hsl
         <?php endforeach; ?>
     </nav>
 
-    <!-- Mobile logout -->
+    <!-- Mobile Logout -->
+    <!-- PERBAIKAN: Tidak lagi submit form langsung, tapi memunculkan modal konfirmasi -->
     <div class="px-3 py-4" style="border-top:1px solid hsl(220,40%,25%);">
-        <form action="<?= base_url('auth/logout') ?>" method="post">
-            <?= csrf_field() ?>
-            <button type="submit"
-                class="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition"
-                style="color:hsl(0,72%,65%);">
-                <?= svgIcon('log-out') ?>
-                Logout
-            </button>
-        </form>
+        <button type="button"
+            onclick="document.getElementById('logoutModal').classList.remove('hidden'); sidebarOpen = false"
+            class="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition"
+            style="color:hsl(0,72%,65%);">
+            <?= svgIcon('log-out') ?>
+            Logout
+        </button>
     </div>
 </aside>
