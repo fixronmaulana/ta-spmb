@@ -198,7 +198,7 @@ $cfg = $du ? ($statusCfg[$du->status] ?? $statusCfg['pending']) : null;
                             <?= esc($du->nama_file_bukti ?? 'Bukti Pembayaran') ?>
                         </span>
                     </div>
-                    <a href="<?= base_url($du->bukti_pembayaran_path) ?>" target="_blank"
+                    <a href="<?= base_url('dashboard/daftar-ulang/' . $du->id . '/bukti') ?>" target="_blank"
                         class="inline-flex items-center gap-1 text-xs font-medium transition px-3 py-1.5 rounded-lg"
                         style="background:hsl(199,89%,48%,.1);color:hsl(199,60%,35%);"
                         onmouseover="this.style.background='hsl(199,89%,48%,.2)'"

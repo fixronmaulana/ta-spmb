@@ -212,4 +212,39 @@ class DaftarUlangController extends BaseController
             'pendaftaran' => $pendaftaran,
         ]);
     }
+
+    /**
+     * Stream bukti pembayaran milik siswa yang sedang login.
+     * Siswa hanya bisa melihat file miliknya sendiri — kepemilikan dicek
+     * via pendaftaran_id yang terhubung ke userId() dari sesi aktif.
+     */
+    public function streamBukti(int $id)
+    {
+        $userId      = $this->userId();
+        $pendaftaran = $this->pendaftaranModel->getByUserId($userId);
+
+        if (! $pendaftaran) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $daftarUlang = $this->model->find($id);
+
+        // Pastikan record ada DAN milik pendaftaran user ini (cegah akses silang antar siswa)
+        if (! $daftarUlang || (int) $daftarUlang->pendaftaran_id !== (int) $pendaftaran->id) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        if (! $daftarUlang->bukti_pembayaran_path) {
+            return redirect()->back()->with('error', 'File bukti tidak ditemukan.');
+        }
+
+        $uploader = new FileUploader();
+        $namaFile = basename($daftarUlang->bukti_pembayaran_path);
+
+        try {
+            $uploader->stream($namaFile, 'bukti');
+        } catch (\RuntimeException $e) {
+            return redirect()->back()->with('error', 'File tidak dapat dibuka.');
+        }
+    }
 }
