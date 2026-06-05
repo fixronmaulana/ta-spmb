@@ -16,7 +16,7 @@ class FileUploader
 
     protected int $maxSizeKb = 2048;
 
-    // ✅ UBAH: dari FCPATH (public/) ke WRITEPATH (writable/)
+    // UBAH: dari FCPATH (public/) ke WRITEPATH (writable/)
     protected array $uploadDirs = [
         'dokumen' => WRITEPATH . 'uploads/dokumen/',
         'foto'    => WRITEPATH . 'uploads/foto/',
@@ -60,7 +60,7 @@ class FileUploader
             'success'       => true,
             'original_name' => $file->getClientName(),
             'saved_name'    => $safeName,
-            // ✅ path yang disimpan ke DB tetap sama formatnya
+            // path yang disimpan ke DB tetap sama formatnya
             'path'          => 'uploads/' . $type . '/' . $safeName,
             'mime_type'     => $mimeType,
             'size'          => $file->getSize(),
@@ -88,14 +88,14 @@ class FileUploader
             throw new \RuntimeException("File tidak ditemukan: {$savedName}");
         }
 
-        // ✅ Deteksi MIME dari file asli (lebih aman dari header user)
+        // Deteksi MIME dari file asli (lebih aman dari header user)
         $mimeType = mime_content_type($path) ?: $mimeType;
 
-        // ✅ Security headers
+        // Security headers
         header('Content-Type: ' . $mimeType);
         header('Content-Disposition: inline; filename="dokumen.' . pathinfo($path, PATHINFO_EXTENSION) . '"');
         header('Content-Length: ' . filesize($path));
-        header('Cache-Control: private, no-store'); // jangan cache di browser
+        header('Cache-Control: private, no-store');
         header('X-Content-Type-Options: nosniff');
         header('Content-Security-Policy: default-src \'none\'');
 
