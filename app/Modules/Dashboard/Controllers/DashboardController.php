@@ -102,18 +102,47 @@ class DashboardController extends BaseController
         $periodeM     = new PeriodeModel();
         $jurusanM     = new JurusanModel();
 
-        // ── KPI data ──────────────────────────────────────────
-        $stats            = $pendaftaranM->getStatistikByStatus();
-        $statsByJurusan   = $pendaftaranM->getStatsByJurusan();
+        // ── Ambil semua periode untuk dropdown filter ─────────
+        $allPeriode   = $periodeM->orderBy('tanggal_mulai', 'DESC')->findAll();
+        $periodeAktif = $periodeM->getPeriodeAktif();
+
+        // ── Periode yang dipilih: dari query string, default ke periode aktif ──
+        $periodeIdFilter = (int) ($this->request->getGet('periode_id') ?? 0);
+        if ($periodeIdFilter === 0 && $periodeAktif) {
+            $periodeIdFilter = (int) $periodeAktif->id;
+        }
+        // null = tampilkan semua jika tidak ada periode aktif maupun pilihan
+        $filterParam = $periodeIdFilter > 0 ? $periodeIdFilter : null;
+
+        // ── Objek periode yang sedang difilter ────────────────
+        $periodeTerpilih = null;
+        foreach ($allPeriode as $p) {
+            if ((int) $p->id === $periodeIdFilter) {
+                $periodeTerpilih = $p;
+                break;
+            }
+        }
+
+        // ── KPI data (difilter per periode) ───────────────────
+        // FIX #2: Gunakan getStatistikByStatusPerPeriode agar data sesuai
+        // periode yang dipilih (bukan seluruh data semua periode)
+        $stats            = $pendaftaranM->getStatistikByStatusPerPeriode($filterParam);
+        $statsByJurusan   = $pendaftaranM->getStatsByJurusanPerPeriode($filterParam);
         $statsByGelombang = $pendaftaranM->getStatsByGelombang();
         $totalSiswaAktif  = $bukuIndukM->countByStatus('aktif');
-        $periodeAktif     = $periodeM->getPeriodeAktif();
         $jurusans         = $jurusanM->getAllActive();
 
         // ── KPI cards ─────────────────────────────────────────
-        $totalPendaftar   = $stats['total'] ?? 0;
-        $totalDiterima    = $stats['lulus'] ?? 0;
-        $totalDaftarUlang = $stats['daftar_ulang'] ?? 0;
+        $totalPendaftar = $stats['total'] ?? 0;
+
+        // FIX #1: Diterima = lulus + daftar_ulang + siswa_aktif
+        // (konsisten dengan halaman Laporan yang sudah benar)
+        $totalDiterima = ($stats['lulus'] ?? 0)
+            + ($stats['daftar_ulang'] ?? 0)
+            + ($stats['siswa_aktif'] ?? 0);
+
+        $totalDaftarUlang = ($stats['daftar_ulang'] ?? 0)
+            + ($stats['siswa_aktif'] ?? 0);
 
         $pctDiterima    = $totalPendaftar > 0
             ? number_format($totalDiterima / $totalPendaftar * 100, 1) . '%'
@@ -123,8 +152,9 @@ class DashboardController extends BaseController
             : '0%';
 
         // ── Status verifikasi untuk horizontal bar chart ──────
+        // Terverifikasi = sudah melewati proses verifikasi (verifikasi + seleksi + lulus + daftar_ulang + siswa_aktif)
         $statusVerifikasi = [
-            ['name' => 'Terverifikasi', 'value' => ($stats['verifikasi'] ?? 0) + ($stats['seleksi'] ?? 0) + ($stats['lulus'] ?? 0)],
+            ['name' => 'Terverifikasi', 'value' => ($stats['verifikasi'] ?? 0) + ($stats['seleksi'] ?? 0) + ($stats['lulus'] ?? 0) + ($stats['daftar_ulang'] ?? 0) + ($stats['siswa_aktif'] ?? 0)],
             ['name' => 'Menunggu',      'value' => $stats['submitted'] ?? 0],
             ['name' => 'Ditolak',       'value' => $stats['tidak_lulus'] ?? 0],
         ];
@@ -161,13 +191,18 @@ class DashboardController extends BaseController
             'statusVerifikasi'  => $statusVerifikasi,
             'periodeAktif'      => $periodeAktif,
             'jurusans'          => $jurusans,
-            // KPI values
-            'totalPendaftar'    => $totalPendaftar,
-            'totalDiterima'     => $totalDiterima,
-            'pctDiterima'       => $pctDiterima,
-            'totalDaftarUlang'  => $totalDaftarUlang,
-            'pctDaftarUlang'    => $pctDaftarUlang,
-            'totalSiswaAktif'   => $totalSiswaAktif,
+            // Filter periode
+            'allPeriode'        => $allPeriode,
+            'periodeIdFilter'   => $periodeIdFilter,
+            'periodeTerpilih'   => $periodeTerpilih,
+            // KPI values — nama variabel ini JANGAN dipakai sebagai nama variabel
+            // tfoot tabel di view (lihat kepala_sekolah.php untuk penjelasan fix #3)
+            'kpiPendaftar'      => $totalPendaftar,
+            'kpiDiterima'       => $totalDiterima,
+            'kpiPctDiterima'    => $pctDiterima,
+            'kpiDaftarUlang'    => $totalDaftarUlang,
+            'kpiPctDaftarUlang' => $pctDaftarUlang,
+            'kpiSiswaAktif'     => $totalSiswaAktif,
         ]);
     }
 

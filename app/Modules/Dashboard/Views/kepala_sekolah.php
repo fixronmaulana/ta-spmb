@@ -4,7 +4,7 @@
     Sesuai mockup React: KepalaSekolahDashboardPage
 
     Struktur halaman:
-      1. Page Header  (judul + filter tahun ajaran)
+      1. Page Header  (judul + filter periode)
       2. KPI Cards    (4 kartu: Total Pendaftar, Diterima, Daftar Ulang Valid, Siswa Aktif)
       3. Charts row   (Line Chart gelombang | Pie Chart distribusi jurusan)
       4. Status Chart (Horizontal Bar Chart status verifikasi)
@@ -13,7 +13,6 @@
 
 <?php
 // ── Chart colors (sesuai CSS variable di app.php) ────────────────────────────
-// Disamakan dengan palet hsl dari tailwind.config di app.php
 $chartColors = [
     'hsl(220,54%,40%)',   // --chart-1  ~ primary
     'hsl(142,71%,45%)',   // --chart-2  ~ success/green
@@ -22,21 +21,23 @@ $chartColors = [
     'hsl(262,70%,58%)',   // --chart-5  ~ purple
 ];
 
-$tahunAjaran = $periodeAktif->tahun_ajaran ?? date('Y') . '/' . (date('Y') + 1);
+$tahunAjaran = $periodeTerpilih->tahun_ajaran
+    ?? ($periodeAktif->tahun_ajaran ?? date('Y') . '/' . (date('Y') + 1));
 
-// Tabel rekap: gabungkan statsByJurusan dengan jurusans
-// Buat lookup dari statsByJurusan berdasarkan jurusan_id
+// Tabel rekap: lookup statsByJurusan berdasarkan jurusan_id
 $statsLookup = [];
 foreach ($statsByJurusan as $row) {
     $statsLookup[$row->jurusan_id ?? 0] = $row;
 }
 
-// Total row untuk tfoot
-$totalKuota       = 0;
-$totalPendaftar   = 0;
-$totalDiterima    = 0;
-$totalDaftarUlang = 0;
-$totalAktif       = 0;
+// FIX #3: Gunakan nama variabel BERBEDA untuk akumulator tfoot tabel
+// agar TIDAK menimpa variabel KPI ($kpiPendaftar, $kpiDiterima, dst.)
+// yang dikirim dari controller dan dipakai di section KPI Cards di atas.
+$tblKuota       = 0;
+$tblPendaftar   = 0;
+$tblDiterima    = 0;
+$tblDaftarUlang = 0;
+$tblAktif       = 0;
 ?>
 
 <div class="space-y-6">
@@ -52,19 +53,18 @@ $totalAktif       = 0;
             </p>
         </div>
 
-        <!-- Filter tahun ajaran (sesuai mockup: Select component) -->
+        <!-- Filter periode (dropdown berdasarkan allPeriode dari controller) -->
         <form method="get" class="flex flex-wrap items-center gap-2">
             <div class="relative">
-                <select name="tahun_ajaran" onchange="this.form.submit()"
-                    class="appearance-none w-40 px-3 py-2 pr-8 border border-gray-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                    <option value="<?= esc($tahunAjaran) ?>" selected><?= esc($tahunAjaran) ?></option>
-                    <?php
-                    $tahunAwal = (int) explode('/', $tahunAjaran)[0] ?? (int) date('Y');
-                    for ($y = $tahunAwal - 1; $y >= $tahunAwal - 3; $y--):
-                        $ta = $y . '/' . ($y + 1);
-                    ?>
-                        <option value="<?= $ta ?>"><?= $ta ?></option>
-                    <?php endfor; ?>
+                <select name="periode_id" onchange="this.form.submit()"
+                    class="appearance-none w-44 px-3 py-2 pr-8 border border-gray-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                    <option value="0" <?= ($periodeIdFilter === 0) ? 'selected' : '' ?>>Semua Periode</option>
+                    <?php foreach ($allPeriode as $p): ?>
+                        <option value="<?= (int) $p->id ?>"
+                            <?= ((int) $p->id === $periodeIdFilter) ? 'selected' : '' ?>>
+                            <?= esc($p->tahun_ajaran ?? $p->nama ?? 'Periode ' . $p->id) ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
                 <!-- Chevron icon -->
                 <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
@@ -77,6 +77,8 @@ $totalAktif       = 0;
 
     <!-- ═══════════════════════════════════════════════════════════
          2. KPI CARDS (4 kolom sesuai mockup)
+         Menggunakan variabel $kpi* dari controller — TIDAK akan
+         tertimpa oleh akumulator tfoot tabel ($tbl*) di bawah.
     ═══════════════════════════════════════════════════════════ -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
@@ -86,7 +88,7 @@ $totalAktif       = 0;
             <div class="flex items-center justify-between">
                 <div class="min-w-0 flex-1">
                     <p class="text-sm text-gray-500">Total Pendaftar</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-0.5"><?= number_format($totalPendaftar) ?></p>
+                    <p class="text-3xl font-bold text-gray-900 mt-0.5"><?= number_format($kpiPendaftar) ?></p>
                     <!-- Badge trend sesuai mockup -->
                     <span class="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
                         style="background:hsl(142,71%,45%,.12);color:hsl(142,60%,30%);">
@@ -111,8 +113,8 @@ $totalAktif       = 0;
             <div class="flex items-center justify-between">
                 <div class="min-w-0 flex-1">
                     <p class="text-sm text-gray-500">Diterima</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-0.5"><?= number_format($totalDiterima) ?></p>
-                    <p class="text-sm text-gray-400 mt-1"><?= esc($pctDiterima) ?> dari total</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-0.5"><?= number_format($kpiDiterima) ?></p>
+                    <p class="text-sm text-gray-400 mt-1"><?= esc($kpiPctDiterima) ?> dari total</p>
                 </div>
                 <div class="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 ml-3"
                     style="background:hsl(142,71%,45%,.12);">
@@ -130,8 +132,8 @@ $totalAktif       = 0;
             <div class="flex items-center justify-between">
                 <div class="min-w-0 flex-1">
                     <p class="text-sm text-gray-500">Daftar Ulang Valid</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-0.5"><?= number_format($totalDaftarUlang) ?></p>
-                    <p class="text-sm text-gray-400 mt-1"><?= esc($pctDaftarUlang) ?> dari diterima</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-0.5"><?= number_format($kpiDaftarUlang) ?></p>
+                    <p class="text-sm text-gray-400 mt-1"><?= esc($kpiPctDaftarUlang) ?> dari diterima</p>
                 </div>
                 <div class="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 ml-3"
                     style="background:hsl(199,89%,48%,.12);">
@@ -148,7 +150,7 @@ $totalAktif       = 0;
             <div class="flex items-center justify-between">
                 <div class="min-w-0 flex-1">
                     <p class="text-sm text-gray-500">Siswa Aktif</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-0.5"><?= number_format($totalSiswaAktif) ?></p>
+                    <p class="text-3xl font-bold text-gray-900 mt-0.5"><?= number_format($kpiSiswaAktif) ?></p>
                     <p class="text-sm text-gray-400 mt-1">Sudah masuk Buku Induk</p>
                 </div>
                 <div class="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 ml-3"
@@ -258,17 +260,18 @@ $totalAktif       = 0;
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     <?php foreach ($statsByJurusan as $row):
-                        $kuota      = (int) ($row->kuota ?? 0);
-                        $pendaftar  = (int) ($row->total_daftar ?? 0);
-                        $diterima   = (int) ($row->total_lulus ?? 0);
+                        $kuota       = (int) ($row->kuota ?? 0);
+                        $pendaftar   = (int) ($row->total_daftar ?? 0);
+                        $diterima    = (int) ($row->total_lulus ?? 0);
                         $daftarUlang = (int) ($row->total_daftar_ulang ?? 0);
-                        $aktif      = (int) ($row->total_siswa_aktif ?? 0);
+                        $aktif       = (int) ($row->total_siswa_aktif ?? 0);
 
-                        $totalKuota       += $kuota;
-                        $totalPendaftar   += $pendaftar;
-                        $totalDiterima    += $diterima;
-                        $totalDaftarUlang += $daftarUlang;
-                        $totalAktif       += $aktif;
+                        // FIX #3: akumulasi ke variabel $tbl* bukan $total*
+                        $tblKuota       += $kuota;
+                        $tblPendaftar   += $pendaftar;
+                        $tblDiterima    += $diterima;
+                        $tblDaftarUlang += $daftarUlang;
+                        $tblAktif       += $aktif;
                     ?>
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="py-3 px-4 font-medium text-gray-900">
@@ -298,12 +301,12 @@ $totalAktif       = 0;
                         <tr class="border-t-2 border-gray-100 font-bold"
                             style="background:hsl(220,54%,20%,.04);">
                             <td class="py-3 px-4 text-gray-900">TOTAL</td>
-                            <td class="py-3 px-4 text-center text-gray-900"><?= $totalKuota ?></td>
-                            <td class="py-3 px-4 text-center text-gray-900"><?= $totalPendaftar ?></td>
-                            <td class="py-3 px-4 text-center text-gray-900"><?= $totalDiterima ?></td>
-                            <td class="py-3 px-4 text-center text-gray-900"><?= $totalDaftarUlang ?></td>
+                            <td class="py-3 px-4 text-center text-gray-900"><?= $tblKuota ?></td>
+                            <td class="py-3 px-4 text-center text-gray-900"><?= $tblPendaftar ?></td>
+                            <td class="py-3 px-4 text-center text-gray-900"><?= $tblDiterima ?></td>
+                            <td class="py-3 px-4 text-center text-gray-900"><?= $tblDaftarUlang ?></td>
                             <td class="py-3 px-4 text-center font-bold" style="color:hsl(142,60%,30%);">
-                                <?= $totalAktif ?>
+                                <?= $tblAktif ?>
                             </td>
                         </tr>
                     </tfoot>
