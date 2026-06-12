@@ -4,9 +4,6 @@ namespace App\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
 
-/**
- * FIXED: 'jurusans' → 'jurusan' (sesuai migration CreateJurusanTable)
- */
 class JurusanSeeder extends Seeder
 {
     public function run(): void
@@ -15,10 +12,10 @@ class JurusanSeeder extends Seeder
 
         $jurusans = [
             [
-                'kode'       => 'RPL',
+                'kode'       => 'TJKT',
                 'kode_nis'   => '01',
-                'nama'       => 'Rekayasa Perangkat Lunak',
-                'deskripsi'  => 'Jurusan yang mempelajari pengembangan software, pemrograman, dan sistem informasi.',
+                'nama'       => 'Teknik Jaringan Komputer dan Telekomunikasi',
+                'deskripsi'  => 'Jurusan yang mempelajari jaringan komputer, telekomunikasi, dan infrastruktur teknologi informasi.',
                 'kuota'      => 36,
                 'is_active'  => 1,
                 'urutan'     => 1,
@@ -26,10 +23,10 @@ class JurusanSeeder extends Seeder
                 'updated_at' => $now,
             ],
             [
-                'kode'       => 'TKJ',
+                'kode'       => 'AK',
                 'kode_nis'   => '02',
-                'nama'       => 'Teknik Komputer dan Jaringan',
-                'deskripsi'  => 'Jurusan yang mempelajari jaringan komputer, administrasi sistem, dan keamanan jaringan.',
+                'nama'       => 'Akuntansi',
+                'deskripsi'  => 'Jurusan yang mempelajari akuntansi, pembukuan, dan pengelolaan keuangan.',
                 'kuota'      => 36,
                 'is_active'  => 1,
                 'urutan'     => 2,
@@ -37,10 +34,10 @@ class JurusanSeeder extends Seeder
                 'updated_at' => $now,
             ],
             [
-                'kode'       => 'AKL',
+                'kode'       => 'ATU',
                 'kode_nis'   => '03',
-                'nama'       => 'Akuntansi dan Keuangan Lembaga',
-                'deskripsi'  => 'Jurusan yang mempelajari akuntansi, keuangan, dan manajemen bisnis.',
+                'nama'       => 'Agribisnis Ternak Unggas',
+                'deskripsi'  => 'Jurusan yang mempelajari budidaya, manajemen, dan agribisnis peternakan unggas.',
                 'kuota'      => 36,
                 'is_active'  => 1,
                 'urutan'     => 3,
@@ -48,19 +45,29 @@ class JurusanSeeder extends Seeder
                 'updated_at' => $now,
             ],
             [
-                'kode'       => 'BDP',
+                'kode'       => 'DPIB',
                 'kode_nis'   => '04',
-                'nama'       => 'Bisnis Daring dan Pemasaran',
-                'deskripsi'  => 'Jurusan yang mempelajari pemasaran digital, e-commerce, dan bisnis online.',
+                'nama'       => 'Desain Pemodelan dan Informasi Bangunan',
+                'deskripsi'  => 'Jurusan yang mempelajari desain arsitektur, pemodelan bangunan, dan teknologi konstruksi.',
                 'kuota'      => 36,
                 'is_active'  => 1,
                 'urutan'     => 4,
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
+            [
+                'kode'       => 'DKV',
+                'kode_nis'   => '05',
+                'nama'       => 'Desain Komunikasi dan Visual',
+                'deskripsi'  => 'Jurusan yang mempelajari desain grafis, komunikasi visual, dan media kreatif.',
+                'kuota'      => 36,
+                'is_active'  => 1,
+                'urutan'     => 5,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
         ];
 
-        // FIXED: 'jurusans' → 'jurusan'
         $this->db->table('jurusan')->insertBatch($jurusans);
         echo "JurusanSeeder: " . count($jurusans) . " jurusan created.\n";
     }

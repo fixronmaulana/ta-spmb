@@ -15,7 +15,7 @@ class PeriodeSeeder extends Seeder
 
         $periodes = [
             [
-                'nama'                         => 'PPDB 2025/2026',
+                'nama'                         => 'SPMB 2025/2026',
                 'tahun_ajaran'                 => '2025/2026',
                 'tanggal_mulai'                => '2025-01-15',
                 'tanggal_selesai'              => '2025-06-30',
@@ -24,7 +24,7 @@ class PeriodeSeeder extends Seeder
                 'tanggal_daftar_ulang_selesai' => '2025-07-20',
                 'is_active'                    => 1,
                 'is_published'                 => 0,
-                'deskripsi'                    => 'Penerimaan Peserta Didik Baru Tahun Ajaran 2025/2026',
+                'deskripsi'                    => 'Sistem Penerimaan Murid Baru Tahun Ajaran 2025/2026',
                 'created_at'                   => $now,
                 'updated_at'                   => $now,
             ],

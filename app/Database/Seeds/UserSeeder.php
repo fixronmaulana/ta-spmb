@@ -40,7 +40,7 @@ class UserSeeder extends Seeder
             ],[
                 'role_id'           => $roleMap['admin_tu'] ?? 1,
                 'username'          => 'admin_2',
-                'nama_lengkap'      => 'Administrator TU',
+                'nama_lengkap'      => 'Ketua Panitia',
                 'email'             => 'admin2@almunawwir.sch.id',
                 'password'          => password_hash('Admin@12345', PASSWORD_BCRYPT, ['cost' => 12]),
                 'is_active'         => 1,
