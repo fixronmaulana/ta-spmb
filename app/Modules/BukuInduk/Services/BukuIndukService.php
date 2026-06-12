@@ -157,17 +157,32 @@ class BukuIndukService
                 'kelas_id'       => $resolvedKelasId,
                 'jurusan_id'     => $jurusanId,
                 'nis'            => $nis,
-                'nisn'           => $dataDiri->nisn,
+                // ── Identitas ──────────────────────────────────────────────
+                'nik'            => $dataDiri->nik            ?? null,
+                'nisn'           => $dataDiri->nisn           ?? null,
                 'nama_lengkap'   => $dataDiri->nama_lengkap,
-                'jenis_kelamin'  => $dataDiri->jenis_kelamin,
-                'tempat_lahir'   => $dataDiri->tempat_lahir,
-                'tanggal_lahir'  => $dataDiri->tanggal_lahir,
-                'agama'          => $dataDiri->agama,
-                'alamat'         => $dataDiri->alamat,
-                'no_hp'          => $dataDiri->no_hp,
-                'nama_ayah'      => $dataDiri->nama_ayah,
-                'nama_ibu'       => $dataDiri->nama_ibu,
-                'no_hp_ortu'     => $dataDiri->no_hp_ortu,
+                'nama_panggilan' => $dataDiri->nama_panggilan ?? null,
+                'jenis_kelamin'  => $dataDiri->jenis_kelamin  ?? null,
+                'tempat_lahir'   => $dataDiri->tempat_lahir   ?? null,
+                'tanggal_lahir'  => $dataDiri->tanggal_lahir  ?? null,
+                'agama'          => $dataDiri->agama          ?? null,
+                'kewarganegaraan' => $dataDiri->kewarganegaraan ?? 'Indonesia',
+                // ── Alamat & Kontak ────────────────────────────────────────
+                'alamat'         => $dataDiri->alamat         ?? null,
+                'no_hp'          => $dataDiri->no_hp          ?? null,
+                'email_siswa'    => $dataDiri->email_siswa    ?? null,
+                // ── Orang Tua ──────────────────────────────────────────────
+                'nama_ayah'      => $dataDiri->nama_ayah      ?? null,
+                'pekerjaan_ayah' => $dataDiri->pekerjaan_ayah ?? null,
+                'no_hp_ayah'     => $dataDiri->no_hp_ortu     ?? null, // no_hp_ortu = no HP ayah di form pendaftaran
+                'nama_ibu'       => $dataDiri->nama_ibu       ?? null,
+                'pekerjaan_ibu'  => $dataDiri->pekerjaan_ibu  ?? null,
+                'no_hp_ibu'      => $dataDiri->no_hp_ibu      ?? null,
+                'no_hp_ortu'     => $dataDiri->no_hp_ortu     ?? null,
+                // ── Pendidikan Asal ────────────────────────────────────────
+                'asal_sekolah'   => $dataDiri->asal_sekolah   ?? null,
+                'tahun_lulus_smp' => $dataDiri->tahun_lulus     ?? null, // di data_diri_siswas nama kolom = tahun_lulus
+                // ── Meta ───────────────────────────────────────────────────
                 'tahun_masuk'    => $tahunMasuk,
                 'status_siswa'   => 'aktif',
                 'converted_at'   => date('Y-m-d H:i:s'),
@@ -190,7 +205,6 @@ class BukuIndukService
             }
 
             $db->query('COMMIT');
-
         } catch (\Exception $e) {
             $db->query('ROLLBACK');
             log_message('error', 'BukuIndukService::konversi - ' . $e->getMessage());

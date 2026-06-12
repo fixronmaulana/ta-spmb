@@ -8,7 +8,7 @@ use App\Modules\BukuInduk\Models\BukuIndukEditLogModel;
 use App\Modules\BukuInduk\Services\BukuIndukService;
 use App\Modules\Pendaftaran\Models\PendaftaranModel;
 use App\Modules\MasterData\Models\JurusanModel;
-use App\Modules\MasterData\Models\KelasModel; 
+use App\Modules\MasterData\Models\KelasModel;
 use App\Modules\BukuInduk\Libraries\ExcelExporter;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -448,9 +448,27 @@ class BukuIndukController extends BaseController
             throw new \CodeIgniter\Exceptions\PageNotFoundException('Data siswa tidak ditemukan.');
         }
 
+        // Format tanggal Indonesia — realtime saat cetak
+        $bulanId = [
+            1 => 'Januari',
+            2 => 'Februari',
+            3 => 'Maret',
+            4 => 'April',
+            5 => 'Mei',
+            6 => 'Juni',
+            7 => 'Juli',
+            8 => 'Agustus',
+            9 => 'September',
+            10 => 'Oktober',
+            11 => 'November',
+            12 => 'Desember',
+        ];
+        $tglCetakFormatted = date('j') . ' ' . $bulanId[(int) date('n')] . ' ' . date('Y');
+
         $html = view('App\Modules\BukuInduk\Views\cetak', [
-            'siswa'    => $siswa,
-            'tglCetak' => date('d/m/Y H:i'),
+            'siswa'        => $siswa,
+            'tglCetak'     => date('d/m/Y H:i'),
+            'tglTtd'       => $tglCetakFormatted, // contoh: "12 Juni 2026"
         ]);
 
         $options = new Options();

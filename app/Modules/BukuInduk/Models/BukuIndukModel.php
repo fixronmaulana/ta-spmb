@@ -57,15 +57,19 @@ class BukuIndukModel extends Model
     {
         return $this->select(
             'buku_induks.*,
-                 j.nama   as jurusan_nama,  j.kode  as jurusan_kode,
-                 k.nama   as kelas_nama,    k.tingkat as kelas_tingkat,
+                 j.nama        as jurusan_nama,   j.kode as jurusan_kode,
+                 k.nama        as kelas_nama,      k.tingkat as kelas_tingkat,
                  k.wali_kelas,
-                 u.nama_lengkap as admin_name'
+                 u.nama_lengkap as admin_name,
+                 dds.status_anak    as dds_status_anak,
+                 dds.alamat_sekolah as dds_alamat_sekolah,
+                 ks.nama_lengkap    as kepala_sekolah_nama'
         )
-            // FIXED: 'jurusan j' bukan 'jurusans j'
-            ->join('jurusan j', 'j.id = buku_induks.jurusan_id')
-            ->join('kelas k',   'k.id = buku_induks.kelas_id',    'left')
-            ->join('users u',   'u.id = buku_induks.converted_by', 'left')
+            ->join('jurusan j',          'j.id = buku_induks.jurusan_id')
+            ->join('kelas k',            'k.id = buku_induks.kelas_id',                       'left')
+            ->join('users u',            'u.id = buku_induks.converted_by',                   'left')
+            ->join('data_diri_siswas dds', 'dds.pendaftaran_id = buku_induks.pendaftaran_id',   'left')
+            ->join('users ks',           'ks.role_id = 2',                                    'left')
             ->find($id);
     }
 
