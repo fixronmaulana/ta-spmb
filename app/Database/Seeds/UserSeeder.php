@@ -51,7 +51,7 @@ class UserSeeder extends Seeder
             [
                 'role_id'           => $roleMap['kepala_sekolah'] ?? 2,
                 'username'          => 'kepala_sekolah',
-                'nama_lengkap'      => 'Drs. H. Ahmad Fauzi, M.Pd',
+                'nama_lengkap'      => 'Ahmad Azmi Khoirul Umam, S.Pt., M.Pt., M.Sc',
                 'email'             => 'kepsek@almunawwir.sch.id',
                 'password'          => password_hash('Kepsek@12345', PASSWORD_BCRYPT, ['cost' => 12]),
                 'is_active'         => 1,

@@ -10,6 +10,8 @@ use App\Modules\Pendaftaran\Models\PendaftaranModel;
 use App\Modules\MasterData\Models\JurusanModel;
 use App\Modules\MasterData\Models\KelasModel; 
 use App\Modules\BukuInduk\Libraries\ExcelExporter;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class BukuIndukController extends BaseController
 {
@@ -431,6 +433,69 @@ class BukuIndukController extends BaseController
 
         (new ExcelExporter())->exportSingle($siswa);
         // exportSingle() memanggil exit — tidak ada kode setelah ini
+    }
+
+    // =========================================================
+    // CETAK PDF — BUKU INDUK LENGKAP
+    // GET  admin/buku-induk/{id}/cetak
+    // =========================================================
+
+    public function cetak(int $id)
+    {
+        $siswa = $this->model->getWithRelations($id);
+
+        if (! $siswa) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Data siswa tidak ditemukan.');
+        }
+
+        $html = view('App\Modules\BukuInduk\Views\cetak', [
+            'siswa'    => $siswa,
+            'tglCetak' => date('d/m/Y H:i'),
+        ]);
+
+        $options = new Options();
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isHtml5ParserEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $filename = 'buku_induk_' . preg_replace('/[^a-zA-Z0-9]/', '_', $siswa->nis) . '.pdf';
+        $dompdf->stream($filename, ['Attachment' => false]); // false = buka di browser (bukan download)
+    }
+
+    // =========================================================
+    // CETAK KARTU SISWA
+    // GET  admin/buku-induk/{id}/cetak-kartu
+    // =========================================================
+
+    public function cetakKartu(int $id)
+    {
+        $siswa = $this->model->getWithRelations($id);
+
+        if (! $siswa) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Data siswa tidak ditemukan.');
+        }
+
+        $html = view('App\Modules\BukuInduk\Views\cetak', [
+            'siswa'    => $siswa,
+            'tglCetak' => date('d/m/Y H:i'),
+            'mode'     => 'kartu',
+        ]);
+
+        $options = new Options();
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isHtml5ParserEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper([0, 0, 241.89, 153.07], 'landscape'); // ukuran ID card 85.6mm x 53.98mm
+        $dompdf->render();
+
+        $filename = 'kartu_siswa_' . preg_replace('/[^a-zA-Z0-9]/', '_', $siswa->nis) . '.pdf';
+        $dompdf->stream($filename, ['Attachment' => false]);
     }
 
     // =========================================================

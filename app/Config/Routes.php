@@ -87,7 +87,7 @@ $routes->group('admin', ['filter' => 'auth:admin_tu'], function ($routes) {
     $routes->post('verifikasi/(:num)/catatan',          'App\Modules\Verifikasi\Controllers\VerifikasiController::kirimCatatan/$1');
     $routes->get('dokumen/(:num)',                      'App\Modules\Verifikasi\Controllers\VerifikasiController::streamDokumen/$1');
 
-    // Seleksi / Penetapan Kelulusan — Admin langsung final, tanpa approval kepsek
+    // Seleksi / Penetapan Kelulusan — Admin
     $routes->get('seleksi',                             'App\Modules\Seleksi\Controllers\SeleksiController::index');
     $routes->post('seleksi/tetapkan',                   'App\Modules\Seleksi\Controllers\SeleksiController::tetapkan');
     $routes->post('seleksi/publish',                    'App\Modules\Seleksi\Controllers\SeleksiController::publish');
@@ -108,6 +108,8 @@ $routes->group('admin', ['filter' => 'auth:admin_tu'], function ($routes) {
     $routes->post('buku-induk/export-excel-selected',   'App\Modules\BukuInduk\Controllers\BukuIndukController::exportExcelSelected');
     $routes->get('buku-induk',                          'App\Modules\BukuInduk\Controllers\BukuIndukController::index');
     $routes->get('buku-induk/(:num)',                   'App\Modules\BukuInduk\Controllers\BukuIndukController::detail/$1');
+    $routes->get('buku-induk/(:num)/cetak',             'App\Modules\BukuInduk\Controllers\BukuIndukController::cetak/$1');
+    $routes->get('buku-induk/(:num)/cetak-kartu',       'App\Modules\BukuInduk\Controllers\BukuIndukController::cetakKartu/$1');
     $routes->get('buku-induk/(:num)/export-excel',      'App\Modules\BukuInduk\Controllers\BukuIndukController::exportExcelSingle/$1');
     $routes->post('buku-induk/(:num)/pribadi',          'App\Modules\BukuInduk\Controllers\BukuIndukController::updatePribadi/$1');
     $routes->post('buku-induk/(:num)/kesehatan',        'App\Modules\BukuInduk\Controllers\BukuIndukController::updateKesehatan/$1');
