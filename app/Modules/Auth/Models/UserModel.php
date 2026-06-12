@@ -10,24 +10,22 @@ class UserModel extends Model
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'object';
-    protected $useSoftDeletes   = false; // Nonaktifkan dulu sampai kolom deleted_at ditambahkan
+    protected $useSoftDeletes   = false;
     protected $protectFields    = true;
 
-    // ============================================================
-    // PERBAIKAN: Sesuaikan dengan struktur database sebenarnya
-    // ============================================================
     protected $allowedFields = [
-        'role_id',           // BUKAN 'role' tapi 'role_id' (foreign key ke tabel roles)
-        'username',          // Ada di database
-        'nama_lengkap',      // BUKAN 'name' tapi 'nama_lengkap'
+        'role_id',
+        'username',
+        'nama_lengkap',
         'email',
         'password',
-        'no_telp',           // BUKAN 'phone' tapi 'no_telp'
+        'no_telp',
         'is_active',
         'email_verified_at',
         'remember_token',
+        'session_token',     // Token unik per sesi aktif (single session enforcement)
         'last_login_at',
-        'last_login_ip',     // Ini mungkin tidak ada di database, perlu ditambahkan
+        'last_login_ip',
     ];
 
     protected $useTimestamps = true;
@@ -89,7 +87,6 @@ class UserModel extends Model
     {
         return $this->update($id, [
             'last_login_at' => date('Y-m-d H:i:s'),
-            // 'last_login_ip' => $ip, // Commented karena kolom mungkin belum ada
         ]);
     }
 
@@ -107,5 +104,48 @@ class UserModel extends Model
     public function clearRememberToken(int $id): bool
     {
         return $this->update($id, ['remember_token' => null]);
+    }
+
+    // =========================================================
+    // SESSION TOKEN — Single Active Session Management
+    // =========================================================
+
+    /**
+     * Buat dan simpan session token baru untuk user.
+     * Token lama otomatis ditimpa sehingga sesi sebelumnya menjadi tidak valid.
+     *
+     * @return string Token yang baru dibuat
+     */
+    public function createSessionToken(int $id): string
+    {
+        $token = bin2hex(random_bytes(32)); // 64 karakter hex
+        $this->update($id, ['session_token' => $token]);
+        return $token;
+    }
+
+    /**
+     * Hapus session token (saat logout).
+     */
+    public function clearSessionToken(int $id): bool
+    {
+        return $this->update($id, ['session_token' => null]);
+    }
+
+    /**
+     * Validasi apakah session token di session PHP cocok dengan yang ada di DB.
+     *
+     * @param int    $userId        ID user dari session
+     * @param string $sessionToken  Token dari session PHP
+     * @return bool  true = valid, false = sudah diambil alih / tidak valid
+     */
+    public function isSessionTokenValid(int $userId, string $sessionToken): bool
+    {
+        $user = $this->select('session_token')->find($userId);
+
+        if (! $user) {
+            return false;
+        }
+
+        return $user->session_token === $sessionToken;
     }
 }

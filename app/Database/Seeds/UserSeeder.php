@@ -31,7 +31,17 @@ class UserSeeder extends Seeder
                 'role_id'           => $roleMap['admin_tu'] ?? 1,
                 'username'          => 'admin_tu',
                 'nama_lengkap'      => 'Administrator TU',
-                'email'             => 'admin@almunawiir.sch.id',
+                'email'             => 'admin@almunawwir.sch.id',
+                'password'          => password_hash('Admin@12345', PASSWORD_BCRYPT, ['cost' => 12]),
+                'is_active'         => 1,
+                'email_verified_at' => $now,
+                'created_at'        => $now,
+                'updated_at'        => $now,
+            ],[
+                'role_id'           => $roleMap['admin_tu'] ?? 1,
+                'username'          => 'admin_2',
+                'nama_lengkap'      => 'Administrator TU',
+                'email'             => 'admin2@almunawwir.sch.id',
                 'password'          => password_hash('Admin@12345', PASSWORD_BCRYPT, ['cost' => 12]),
                 'is_active'         => 1,
                 'email_verified_at' => $now,
@@ -42,7 +52,7 @@ class UserSeeder extends Seeder
                 'role_id'           => $roleMap['kepala_sekolah'] ?? 2,
                 'username'          => 'kepala_sekolah',
                 'nama_lengkap'      => 'Drs. H. Ahmad Fauzi, M.Pd',
-                'email'             => 'kepsek@almunawiir.sch.id',
+                'email'             => 'kepsek@almunawwir.sch.id',
                 'password'          => password_hash('Kepsek@12345', PASSWORD_BCRYPT, ['cost' => 12]),
                 'is_active'         => 1,
                 'email_verified_at' => $now,
@@ -60,13 +70,38 @@ class UserSeeder extends Seeder
                 'created_at'        => $now,
                 'updated_at'        => $now,
             ],
+            [
+                'role_id'           => $roleMap['calon_siswa'] ?? 3,
+                'username'          => 'siswa_demo2',
+                'nama_lengkap'      => 'Gilang Setia A. S.',
+                'email'             => 'siswa2@demo.com',
+                'password'          => password_hash('Siswa@12345', PASSWORD_BCRYPT, ['cost' => 12]),
+                'is_active'         => 1,
+                'email_verified_at' => $now,
+                'created_at'        => $now,
+                'updated_at'        => $now,
+            ],
+            [
+                'role_id'           => $roleMap['calon_siswa'] ?? 3,
+                'username'          => 'siswa_demo3',
+                'nama_lengkap'      => 'Agung Bahtiar',
+                'email'             => 'siswa3@demo.com',
+                'password'          => password_hash('Siswa@12345', PASSWORD_BCRYPT, ['cost' => 12]),
+                'is_active'         => 1,
+                'email_verified_at' => $now,
+                'created_at'        => $now,
+                'updated_at'        => $now,
+            ],
         ];
 
         $this->db->table('users')->insertBatch($users);
 
         echo "UserSeeder: " . count($users) . " users created.\n";
-        echo "Admin    → admin@almunawiir.sch.id / Admin@12345\n";
-        echo "Kepsek   → kepsek@almunawiir.sch.id / Kepsek@12345\n";
+        echo "Admin    → admin@almunawwir.sch.id / Admin@12345\n";
+        echo "Admin 2  → admin2@almunawwir.sch.id / Admin@12345\n";
+        echo "Kepsek   → kepsek@almunawwir.sch.id / Kepsek@12345\n";
         echo "Demo     → siswa1@demo.com / Siswa@12345\n";
+        echo "Demo 2   → siswa2@demo.com / Siswa@12345\n";
+        echo "Demo 3   → siswa3@demo.com / Siswa@12345\n";
     }
 }

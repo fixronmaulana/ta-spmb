@@ -13,7 +13,7 @@ if (! function_exists('status_label')) {
             'revisi'       => ['label' => 'Perlu Revisi',      'class' => 'bg-orange-100 text-orange-800'],
             'seleksi'      => ['label' => 'Dalam Seleksi',     'class' => 'bg-purple-100 text-purple-800'],
             'lulus'        => ['label' => 'Diterima / Lulus',  'class' => 'bg-green-100 text-green-800'],
-            'tidak_lulus'  => ['label' => 'Tidak Diterima',    'class' => 'bg-red-100 text-red-800'],
+        'tidak_lulus'  => ['label' => 'Tidak Diterima',    'class' => 'bg-red-100 text-red-800'],
             'daftar_ulang' => ['label' => 'Daftar Ulang',      'class' => 'bg-teal-100 text-teal-800'],
             'siswa_aktif'  => ['label' => 'Siswa Aktif',       'class' => 'bg-emerald-100 text-emerald-800'],
         ];

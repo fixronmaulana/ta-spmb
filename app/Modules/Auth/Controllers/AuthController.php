@@ -97,9 +97,52 @@ class AuthController extends BaseController
                 ->with('info', $result['message']);
         }
 
+        // Akun sedang aktif di perangkat/browser lain — tawarkan force login
+        if (! $result['success'] && ! empty($result['already_active'])) {
+            // Simpan user_id sementara untuk digunakan oleh doForceLogin
+            session()->set('force_login_user_id', $result['user_id']);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('already_active', $result['message']);
+        }
+
         if (! $result['success']) {
             return redirect()->back()
                 ->withInput()
+                ->with('error', $result['message']);
+        }
+
+        $redirectUrl = session()->get('redirect_url');
+        session()->remove('redirect_url');
+
+        if ($redirectUrl && strpos($redirectUrl, base_url()) === 0) {
+            return redirect()->to($redirectUrl)->with('success', $result['message']);
+        }
+
+        return $this->redirectByRole()->with('success', 'Selamat datang, ' . session()->get('user_name') . '!');
+    }
+
+    /**
+     * Paksa login: akhiri sesi lama dan buat sesi baru di browser ini.
+     * Hanya bisa dipanggil setelah doLogin mengembalikan already_active.
+     */
+    public function doForceLogin()
+    {
+        $userId = session()->get('force_login_user_id');
+
+        if (! $userId) {
+            return redirect()->to(base_url('auth/login'))
+                ->with('error', 'Sesi tidak valid. Silakan login kembali.');
+        }
+
+        // Hapus flag sementara
+        session()->remove('force_login_user_id');
+
+        $result = $this->authService->forceLogin((int) $userId);
+
+        if (! $result['success']) {
+            return redirect()->to(base_url('auth/login'))
                 ->with('error', $result['message']);
         }
 
@@ -150,7 +193,6 @@ class AuthController extends BaseController
                 ->with('error', $result['message']);
         }
 
-        // Simpan user_id di session sementara untuk halaman verifikasi OTP
         session()->set('otp_user_id', $result['user_id']);
         session()->set('otp_email',   $result['email']);
 
@@ -162,17 +204,12 @@ class AuthController extends BaseController
     // VERIFIKASI OTP
     // =========================================================
 
-    /**
-     * Tampilkan halaman input kode OTP
-     */
     public function verifyOtp()
     {
-        // Jika sudah login, tidak perlu verifikasi lagi
         if (session()->get('logged_in')) {
             return $this->redirectByRole();
         }
 
-        // Pastikan ada sesi otp_user_id (dari register atau login yang belum verifikasi)
         $userId = session()->get('otp_user_id');
         if (! $userId) {
             return redirect()->to(base_url('auth/login'))
@@ -185,9 +222,6 @@ class AuthController extends BaseController
         ]);
     }
 
-    /**
-     * Proses submit kode OTP
-     */
     public function doVerifyOtp()
     {
         $userId = session()->get('otp_user_id');
@@ -208,16 +242,12 @@ class AuthController extends BaseController
             return redirect()->back()->with('error', $result['message']);
         }
 
-        // Bersihkan sesi OTP sementara
         session()->remove('otp_user_id');
         session()->remove('otp_email');
 
         return $this->redirectByRole()->with('success', $result['message']);
     }
 
-    /**
-     * Kirim ulang OTP (AJAX-friendly, mengembalikan JSON)
-     */
     public function resendOtp()
     {
         $userId = session()->get('otp_user_id');

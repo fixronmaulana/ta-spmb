@@ -138,6 +138,28 @@
                     </div>
                 </div>
 
+                <!-- Already Active Session Alert -->
+                <?php if (session()->getFlashdata('already_active')): ?>
+                    <div class="p-4 rounded-lg mb-6 animate-scale-in text-sm"
+                        style="background: hsl(38,92%,50%,0.10); border: 1px solid hsl(38,92%,50%,0.40); color: hsl(25,80%,30%);">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                            </svg>
+                            <div class="flex-1">
+                                <p class="font-semibold mb-1">Akun Sedang Aktif di Perangkat Lain</p>
+                                <p class="mb-3"><?= esc(session()->getFlashdata('already_active')) ?></p>
+                                <form action="<?= base_url('auth/force-login') ?>" method="POST">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" style="background:hsl(25,80%,40%);color:#fff;padding:8px 18px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;">
+                                        &#9889; Paksa Login (Akhiri Sesi Lain)
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <!-- Error Alert (general) -->
                 <?php if (session()->getFlashdata('error')): ?>
                     <div class="flex items-center gap-3 p-4 rounded-lg mb-6 animate-scale-in text-sm"

@@ -33,6 +33,9 @@ $routes->get('auth/verify-otp',  'App\Modules\Auth\Controllers\AuthController::v
 $routes->post('auth/verify-otp', 'App\Modules\Auth\Controllers\AuthController::doVerifyOtp');
 $routes->post('auth/resend-otp', 'App\Modules\Auth\Controllers\AuthController::resendOtp');
 
+// Force login — akhiri sesi lain dan login di browser ini
+$routes->post('auth/force-login', 'App\Modules\Auth\Controllers\AuthController::doForceLogin');
+
 // Logout
 $routes->get('auth/logout',  'App\Modules\Auth\Controllers\AuthController::logout', ['filter' => 'auth:calon_siswa,admin_tu,kepala_sekolah']);
 $routes->post('auth/logout', 'App\Modules\Auth\Controllers\AuthController::logout', ['filter' => 'auth:calon_siswa,admin_tu,kepala_sekolah']);
@@ -61,10 +64,9 @@ $routes->group('dashboard', ['filter' => 'auth:calon_siswa'], function ($routes)
     $routes->post('pengumuman/cari',                     'App\Modules\Seleksi\Controllers\PengumumanController::cari');
 
     // ── Daftar Ulang (Siswa) ────────────────────────────────────────────────
-    $routes->get('daftar-ulang',                              'App\Modules\DaftarUlang\Controllers\DaftarUlangController::form');
-    $routes->post('daftar-ulang',                             'App\Modules\DaftarUlang\Controllers\DaftarUlangController::submit');
-    $routes->get('daftar-ulang/status',                       'App\Modules\DaftarUlang\Controllers\DaftarUlangController::status');
-    $routes->get('daftar-ulang/(:num)/bukti',                 'App\Modules\DaftarUlang\Controllers\DaftarUlangController::streamBukti/$1');
+    $routes->get('daftar-ulang',                         'App\Modules\DaftarUlang\Controllers\DaftarUlangController::form');
+    $routes->post('daftar-ulang',                        'App\Modules\DaftarUlang\Controllers\DaftarUlangController::submit');
+    $routes->get('daftar-ulang/status',                  'App\Modules\DaftarUlang\Controllers\DaftarUlangController::status');
 
     $routes->get('notifikasi',                           'App\Modules\Notifikasi\Controllers\NotifikasiController::index');
 });
