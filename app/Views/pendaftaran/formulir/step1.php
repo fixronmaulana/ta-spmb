@@ -307,114 +307,16 @@ function errField(string $field, array $errors): string
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
                     <!-- No. HP / WA dengan OTP -->
-                    <div x-data="waVerify()">
+                    <div>
                         <label class="block text-sm font-semibold mb-1.5" style="color:hsl(220,54%,15%);">
                             No. HP / WA Aktif <span style="color:hsl(0,72%,51%);">*</span>
                         </label>
-                        <div class="flex gap-2">
-                            <div class="relative flex-1">
-                                <input type="tel" name="no_hp" id="no_hp"
-                                    value="<?= esc(old('no_hp', $d->no_hp ?? '')) ?>"
-                                    placeholder="08xxxxxxxxxx"
-                                    x-model="phone" @input="onPhoneInput()" @blur="validateFormat()"
-                                    :class="isVerified
-                                        ? 'w-full px-4 py-2.5 rounded-xl text-sm border-2 border-green-500 bg-green-50 focus:outline-none pr-9'
-                                        : (formatError ? '<?= $inpE ?> pr-9' : '<?= isset($err['no_hp']) ? $inpE : $inpN ?> pr-9')"
-                                    autocomplete="tel" required>
-                                <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                    <template x-if="isVerified">
-                                        <svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </template>
-                                    <template x-if="!isVerified && formatError">
-                                        <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <line x1="12" y1="8" x2="12" y2="12" />
-                                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                                        </svg>
-                                    </template>
-                                </span>
-                            </div>
-                            <button type="button" @click="sendOtp()"
-                                :disabled="sending || isVerified || phone.length < 10"
-                                class="flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
-                                style="min-width:110px; height:42px;"
-                                :style="isVerified
-                                    ? 'background:hsl(142,60%,40%);color:white;cursor:default;'
-                                    : (sending || phone.length < 10 ? 'background:hsl(220,10%,85%);color:hsl(220,10%,50%);' : 'background:hsl(220,54%,20%);color:white;cursor:pointer;')">
-                                <template x-if="isVerified">
-                                    <span class="flex items-center gap-1">
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        Terverifikasi
-                                    </span>
-                                </template>
-                                <template x-if="!isVerified && sending">
-                                    <span class="flex items-center gap-1.5">
-                                        <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
-                                        </svg>
-                                        Mengirim…
-                                    </span>
-                                </template>
-                                <template x-if="!isVerified && !sending && countdown > 0">
-                                    <span x-text="`Kirim Ulang (${countdown}s)`"></span>
-                                </template>
-                                <template x-if="!isVerified && !sending && countdown === 0">
-                                    <span x-text="otpSent ? 'Kirim Ulang OTP' : 'Verifikasi WA'"></span>
-                                </template>
-                            </button>
-                        </div>
-                        <p x-show="formatError && !isVerified" x-text="formatError" x-cloak
-                            class="mt-1.5 text-xs" style="color:hsl(0,55%,45%);"></p>
+                        <input type="tel" name="no_hp" id="no_hp"
+                            value="<?= esc(old('no_hp', $d->no_hp ?? '')) ?>"
+                            placeholder="08xxxxxxxxxx"
+                            class="<?= isset($err['no_hp']) ? $inpE : $inpN ?>"
+                            autocomplete="tel" required>
                         <?= errField('no_hp', $err) ?>
-                        <?= errField('wa_verified', $err) ?>
-
-                        <div x-show="otpSent && !isVerified" x-cloak
-                            class="mt-3 p-3.5 rounded-xl border space-y-2.5"
-                            style="background:hsl(210,100%,97%);border-color:hsl(210,80%,85%);">
-                            <p class="text-xs" style="color:hsl(220,54%,30%);">
-                                Masukkan kode <strong>6 digit</strong> yang dikirim ke WhatsApp
-                                <strong x-text="maskedPhone" class="font-mono"></strong>
-                            </p>
-                            <div class="flex items-center gap-2">
-                                <div class="flex gap-1.5">
-                                    <template x-for="i in 6" :key="i">
-                                        <input type="text" inputmode="numeric" maxlength="1"
-                                            :id="`otp_box_${i-1}`"
-                                            class="w-9 h-10 text-center text-base font-bold rounded-lg border-2 transition focus:outline-none"
-                                            :class="otpError ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-300 bg-white focus:border-blue-500'"
-                                            @input="onOtpDigit($event, i-1)"
-                                            @keydown="onOtpKeydown($event, i-1)"
-                                            @paste.prevent="onOtpPaste($event)">
-                                    </template>
-                                </div>
-                                <button type="button" @click="verifyOtp()"
-                                    :disabled="verifying || otpValue.length < 6"
-                                    class="px-4 py-2 rounded-lg text-xs font-semibold text-white transition"
-                                    :style="verifying || otpValue.length < 6 ? 'background:hsl(220,10%,80%);cursor:not-allowed;' : 'background:hsl(142,60%,40%);cursor:pointer;'">
-                                    <template x-if="verifying">
-                                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
-                                        </svg>
-                                    </template>
-                                    <template x-if="!verifying"><span>Konfirmasi</span></template>
-                                </button>
-                            </div>
-                            <p x-show="otpError" x-text="otpError" x-cloak class="text-xs font-medium" style="color:hsl(0,55%,45%);"></p>
-                        </div>
-
-                        <div x-show="isVerified" x-cloak class="mt-2 flex items-center gap-1.5 text-xs font-semibold" style="color:hsl(142,60%,35%);">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Nomor WhatsApp aktif dan terverifikasi
-                        </div>
-                        <input type="hidden" name="wa_verified" :value="isVerified ? '1' : '0'">
                     </div>
 
                     <div>

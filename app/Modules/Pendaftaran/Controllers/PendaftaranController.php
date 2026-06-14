@@ -64,21 +64,6 @@ class PendaftaranController extends BaseController
         $jurusans  = $jurusanModel->getAllActiveWithKuota($pendaftaran->periode_id ?? null);
         $draftData = $this->pendaftaranModel->getDraft($pendaftaran->id, $stepNum);
 
-        // ── Cek status verifikasi WA untuk step 1 ──────────────────
-        $waVerifiedStatus = false;
-        $waVerifiedPhone  = '';
-        if ($stepNum === 1) {
-            $waSession = $this->session->get('wa_verified_' . $this->userId());
-            if (
-                $waSession &&
-                ! empty($waSession['verified']) &&
-                (time() - ($waSession['time'] ?? 0)) < 86400
-            ) {
-                $waVerifiedStatus = true;
-                $waVerifiedPhone  = $waSession['phone'] ?? '';
-            }
-        }
-
         $data = [
             'title'             => "Formulir Pendaftaran — Step {$stepNum}",
             'pendaftaran'       => $pendaftaran,
@@ -91,8 +76,6 @@ class PendaftaranController extends BaseController
             'steps'             => $this->getStepMeta(),
             'jenisDokumenWajib' => jenis_dokumen_wajib(),
             'jenisDokumenSemua' => $this->getJenisDokumenSemua(),
-            'waVerifiedStatus'  => $waVerifiedStatus,
-            'waVerifiedPhone'   => $waVerifiedPhone,
         ];
 
         return $this->render("pendaftaran/formulir/step{$stepNum}", $data);
@@ -121,32 +104,7 @@ class PendaftaranController extends BaseController
             return redirect()->to(base_url('dashboard/status'))
                 ->with('error', 'Formulir tidak dapat diedit.');
         }
-
-        // ── Step 1: set wa_verified dari session jika belum ada di POST ──
-        // Tidak memblokir — hanya memperkaya data. Validasi wa_verified
-        // di PendaftaranValidation bersifat permit_empty sehingga '0'
-        // tetap lolos validasi.
-        if ($stepNum === 1) {
-            $noHp       = $this->request->getPost('no_hp');
-            $normalized = $this->normalizePhone($noHp);
-            $waSession  = $this->session->get('wa_verified_' . $this->userId());
-
-            $waVerified = (
-                $waSession &&
-                ! empty($waSession['verified']) &&
-                isset($waSession['phone']) &&
-                $normalized !== null &&
-                $waSession['phone'] === $normalized &&
-                (time() - ($waSession['time'] ?? 0)) < 86400
-            ) ? '1' : '0';
-
-            // Inject ke $_POST agar dapat dibaca oleh $this->validate()
-            // Prioritaskan nilai dari form jika sudah ada
-            if (empty($_POST['wa_verified'])) {
-                $_POST['wa_verified'] = $waVerified;
-            }
-        }
-
+        
         $rules = PendaftaranValidation::getRulesForStep($stepNum);
 
         if (! empty($rules) && ! $this->validate($rules)) {

@@ -54,8 +54,6 @@ $routes->group('dashboard', ['filter' => 'auth:calon_siswa'], function ($routes)
     $routes->post('formulir/upload-dokumen',             'App\Modules\Pendaftaran\Controllers\DokumenController::upload');
     $routes->post('formulir/upload-ulang-dokumen',       'App\Modules\Pendaftaran\Controllers\DokumenController::uploadUlang');
     $routes->delete('formulir/hapus-dokumen/(:num)',     'App\Modules\Pendaftaran\Controllers\DokumenController::hapus/$1');
-    $routes->post('formulir/check-wa',                   'App\Modules\Pendaftaran\Controllers\PendaftaranController::checkWa');
-    $routes->post('formulir/verify-wa-otp',              'App\Modules\Pendaftaran\Controllers\PendaftaranController::verifyWaOtp');
     $routes->get('dokumen/lihat/(:num)',                 'App\Modules\Pendaftaran\Controllers\PendaftaranController::lihatDokumen/$1');
     $routes->get('status',                               'App\Modules\Pendaftaran\Controllers\PendaftaranController::status');
     $routes->get('sukses',                               'App\Modules\Pendaftaran\Controllers\PendaftaranController::sukses');

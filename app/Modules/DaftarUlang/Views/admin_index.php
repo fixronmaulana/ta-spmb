@@ -3,23 +3,24 @@
 /**
  * View: App\Modules\DaftarUlang\Views\admin_index.php
  *
- * PERBAIKAN sesuai mockup React VerifikasiDaftarUlangPage.tsx:
  *  1. Stats cards: Total, Menunggu (warning), Tervalidasi (success), Ditolak (destructive)
  *  2. Filter + Search bar
- *  3. Tabel: No.Pendaftaran, Nama, Jurusan, Nominal, Tgl Upload, Status, NIS, Aksi
+ *  3. Tabel: No.Pendaftaran, Nama, Jurusan, Nominal, Tgl Upload, Status, Kelas, Aksi
  *  4. Modal Detail: 2-kolom info + preview bukti (dengan zoom + download)
- *  5. Modal Validasi: isi NIS + Kelas + Catatan Admin
+ *  5. Modal Validasi: Penempatan Kelas (dropdown pilihan 1 & 2) + Catatan Admin
+ *     — NIS DIHAPUS dari flow ini; NIS di-generate otomatis saat konversi ke Buku Induk
  *  6. Modal Tolak: alasan penolakan
- *  7. Download button ditambahkan di viewer (sesuai mockup)
  *
  * Variabel dari DaftarUlangAdminController::index():
- *   $daftars — array   (dengan relasi)
- *   $status  — string  (filter aktif)
- *   $search  — string  (query pencarian)
- *   $stats   — array   [total, pending, dikonfirmasi, ditolak]
+ *   $daftars        — array   (dengan relasi termasuk pilihan 1 & 2 jurusan)
+ *   $status         — string  (filter aktif)
+ *   $search         — string  (query pencarian)
+ *   $stats          — array   [total, pending, dikonfirmasi, ditolak]
+ *   $kelasByJurusan — array   kelas aktif dikelompokkan per jurusan_id
  */
 
 $stats = $stats ?? ['total' => 0, 'pending' => 0, 'dikonfirmasi' => 0, 'ditolak' => 0];
+$kelasByJurusan = $kelasByJurusan ?? [];
 
 $badgeCfg = [
     'pending'      => ['bg' => 'hsl(38,92%,50%,.12)',  'text' => 'hsl(38,60%,32%)',  'label' => 'Menunggu Verifikasi'],
@@ -34,7 +35,7 @@ $badgeCfg = [
     <div>
         <h1 class="text-2xl font-bold font-serif" style="color:hsl(220,54%,15%);">Verifikasi Daftar Ulang</h1>
         <p class="text-sm mt-0.5" style="color:hsl(220,15%,55%);">
-            Verifikasi bukti pembayaran daftar ulang dan tetapkan NIS calon siswa
+            Verifikasi bukti pembayaran daftar ulang dan tentukan penempatan kelas calon siswa
         </p>
     </div>
 
@@ -177,7 +178,7 @@ $badgeCfg = [
                             <th class="text-left px-4 py-3.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(220,15%,50%);">Nominal</th>
                             <th class="text-left px-4 py-3.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(220,15%,50%);">Tgl Upload</th>
                             <th class="text-left px-4 py-3.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(220,15%,50%);">Status</th>
-                            <th class="text-left px-4 py-3.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(220,15%,50%);">NIS</th>
+                            <th class="text-left px-4 py-3.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(220,15%,50%);">Kelas</th>
                             <th class="text-right px-5 py-3.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(220,15%,50%);">Aksi</th>
                         </tr>
                     </thead>
@@ -231,8 +232,8 @@ $badgeCfg = [
                                 </td>
 
                                 <td class="px-4 py-3.5">
-                                    <?php if ($d->nis ?? null): ?>
-                                        <span class="text-xs font-mono font-semibold" style="color:hsl(142,55%,28%);"><?= esc($d->nis) ?></span>
+                                    <?php if ($d->nama_kelas ?? null): ?>
+                                        <span class="text-xs font-semibold" style="color:hsl(142,55%,28%);"><?= esc($d->nama_kelas) ?></span>
                                     <?php else: ?>
                                         <span class="text-xs" style="color:hsl(220,15%,65%);">—</span>
                                     <?php endif; ?>
@@ -404,23 +405,24 @@ $badgeCfg = [
                     </template>
 
                     <!-- Banner dikonfirmasi -->
-                    <template x-if="selected?.status === 'dikonfirmasi' && selected?.nis">
+                    <template x-if="selected?.status === 'dikonfirmasi'">
                         <div class="p-4 rounded-xl" style="background:hsl(142,71%,45%,.06);border:1px solid hsl(142,71%,45%,.3);">
                             <p class="text-xs font-semibold mb-2 flex items-center gap-1.5" style="color:hsl(142,55%,28%);">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                                     <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
                                     <polyline points="22 4 12 14.01 9 11.01" />
                                 </svg>
-                                Sudah jadi Siswa Aktif
+                                Pembayaran Terverifikasi
                             </p>
                             <div class="grid grid-cols-2 gap-2 text-sm">
-                                <span style="color:hsl(142,55%,40%);">NIS</span>
-                                <span class="font-bold font-mono" style="color:hsl(142,55%,28%);" x-text="selected?.nis"></span>
                                 <template x-if="selected?.nama_kelas">
                                     <span style="color:hsl(142,55%,40%);">Kelas</span>
                                 </template>
                                 <template x-if="selected?.nama_kelas">
                                     <span class="font-semibold" style="color:hsl(142,55%,28%);" x-text="selected?.nama_kelas"></span>
+                                </template>
+                                <template x-if="!selected?.nama_kelas">
+                                    <span class="col-span-2 text-xs italic" style="color:hsl(142,55%,45%);">Kelas belum ditetapkan. NIS akan digenerate otomatis saat konversi ke Buku Induk.</span>
                                 </template>
                             </div>
                         </div>
@@ -577,8 +579,9 @@ $badgeCfg = [
 
 
     <!-- ══════════════════════════════════════════════════════════════════
-         MODAL: VALIDASI & TETAPKAN NIS
-         Sesuai mockup: isi NIS + Kelas + Catatan + Info notif
+         MODAL: VALIDASI BUKTI PEMBAYARAN
+         — NIS dihapus dari flow ini (digenerate otomatis saat konversi ke Buku Induk)
+         — Penempatan Kelas: dropdown dari kelas pilihan 1 & 2 calon siswa
     ══════════════════════════════════════════════════════════════════ -->
     <div x-show="approveOpen"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
@@ -601,11 +604,11 @@ $badgeCfg = [
                         <polyline points="22 4 12 14.01 9 11.01" />
                     </svg>
                 </div>
-                <h3 class="text-base font-bold" style="color:hsl(220,54%,15%);">Validasi &amp; Tetapkan NIS</h3>
+                <h3 class="text-base font-bold" style="color:hsl(220,54%,15%);">Validasi Bukti Pembayaran</h3>
                 <p class="text-sm mt-1" style="color:hsl(220,15%,50%);">
-                    Validasi bukti pembayaran dan tetapkan NIS untuk
+                    Konfirmasi pembayaran untuk
                     <strong x-text="selected?.nama_tampil ?? selected?.nama_calon" style="color:hsl(220,54%,15%);"></strong>.
-                    Setelah divalidasi, siswa akan resmi menjadi siswa aktif SMK Al-Munawwir IIBS.
+                    NIS akan digenerate otomatis saat Admin TU mengkonversi ke Buku Induk.
                 </p>
             </div>
 
@@ -613,28 +616,41 @@ $badgeCfg = [
                 method="POST" class="px-6 pb-6 space-y-4">
                 <?= csrf_field() ?>
 
-                <!-- NIS -->
-                <div class="space-y-1.5">
-                    <label class="block text-sm font-medium" style="color:hsl(220,54%,15%);">
-                        Nomor Induk Siswa (NIS) <span style="color:hsl(0,72%,51%);">*</span>
-                    </label>
-                    <input type="text" name="nis" x-model="approveNis" required
-                        placeholder="Contoh: 2026.10.001"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:border-transparent"
-                        style="--tw-ring-color:hsl(220,54%,20%,.15);">
-                    <p class="text-xs" style="color:hsl(220,15%,55%);">Format: Tahun.KodeJurusan.NoUrut (contoh: 2026.10.001)</p>
-                </div>
-
-                <!-- Penempatan Kelas -->
+                <!-- Penempatan Kelas (opsional) — dropdown dari pilihan 1 & 2 -->
                 <div class="space-y-1.5">
                     <label class="block text-sm font-medium" style="color:hsl(220,54%,15%);">
                         Penempatan Kelas
                         <span class="text-xs font-normal ml-1" style="color:hsl(220,15%,55%);">(opsional)</span>
                     </label>
-                    <input type="text" name="nama_kelas" x-model="approveKelas"
-                        placeholder="Contoh: X-TKJ-1"
+
+                    <!-- Dropdown diisi secara dinamis via Alpine berdasarkan pilihan jurusan calon siswa -->
+                    <select name="kelas_id" x-model="approveKelasId"
+                        @change="approveKelasNama = $event.target.options[$event.target.selectedIndex].text === '— Tidak ada kelas tersedia —' || $event.target.value === '' ? '' : $event.target.options[$event.target.selectedIndex].text"
                         class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:border-transparent"
                         style="--tw-ring-color:hsl(220,54%,20%,.15);">
+                        <option value="">— Belum ditetapkan —</option>
+                        <template x-for="opt in approveKelasOptions" :key="opt.id">
+                            <option :value="opt.id" x-text="opt.label"></option>
+                        </template>
+                    </select>
+                    <!-- Hidden field nama_kelas untuk dikirim ke controller -->
+                    <input type="hidden" name="nama_kelas" :value="approveKelasNama">
+
+                    <!-- Info jurusan pilihan calon siswa -->
+                    <p class="text-xs" style="color:hsl(220,15%,55%);">
+                        Kelas ditampilkan berdasarkan jurusan pilihan 1
+                        (<span class="font-semibold" x-text="selected?.jurusan_pilihan1_kode ?? '-'"></span>)
+                        dan pilihan 2
+                        (<span class="font-semibold" x-text="selected?.jurusan_pilihan2_kode ?? '-'"></span>)
+                        calon siswa.
+                    </p>
+
+                    <!-- Warning jika tidak ada kelas tersedia -->
+                    <template x-if="approveKelasOptions.length === 0">
+                        <p class="text-xs px-3 py-2 rounded-lg" style="background:hsl(38,92%,50%,.1);color:hsl(38,60%,32%);border:1px solid hsl(38,92%,50%,.25);">
+                            Belum ada kelas aktif untuk jurusan pilihan calon siswa ini. Kelas dapat ditetapkan nanti saat konversi ke Buku Induk.
+                        </p>
+                    </template>
                 </div>
 
                 <!-- Catatan Admin -->
@@ -657,7 +673,7 @@ $badgeCfg = [
                         <line x1="12" y1="8" x2="12" y2="12" />
                         <line x1="12" y1="16" x2="12.01" y2="16" />
                     </svg>
-                    <span>Notifikasi berisi NIS, kelas, dan ucapan selamat akan dikirim otomatis ke siswa.</span>
+                    <span>Notifikasi konfirmasi dan informasi kelas (jika dipilih) akan dikirim otomatis ke siswa. NIS akan diberikan setelah konversi ke Buku Induk.</span>
                 </div>
 
                 <div class="flex gap-3 pt-1">
@@ -760,6 +776,9 @@ $badgeCfg = [
 </div><!-- /x-data -->
 
 <script>
+    // Data kelas aktif per jurusan_id, di-inject dari PHP
+    const kelasByJurusan = <?= json_encode($kelasByJurusan ?? [], JSON_UNESCAPED_UNICODE) ?>;
+
     function daftarUlangAdmin() {
         return {
             // State modal
@@ -770,9 +789,10 @@ $badgeCfg = [
             // Data item yang sedang dipilih
             selected: null,
 
-            // Form approve
-            approveNis: '',
-            approveKelas: '',
+            // Form approve — NIS dihapus, kelas pakai dropdown
+            approveKelasId: '',
+            approveKelasNama: '',
+            approveKelasOptions: [], // [{id, label}] — diisi dari pilihan 1 & 2 calon siswa
 
             // Zoom viewer
             zoom: 100,
@@ -789,8 +809,9 @@ $badgeCfg = [
 
             openApprove(item) {
                 this.selected = item;
-                this.approveNis = this.suggestNis(item);
-                this.approveKelas = item.jurusan_kode ? 'X-' + item.jurusan_kode + '-1' : '';
+                this.approveKelasId = '';
+                this.approveKelasNama = '';
+                this.approveKelasOptions = this.buildKelasOptions(item);
                 this.approveOpen = true;
             },
 
@@ -799,10 +820,34 @@ $badgeCfg = [
                 this.rejectOpen = true;
             },
 
-            suggestNis(item) {
-                const year = new Date().getFullYear();
-                const kode = item.jurusan_kode ?? '00';
-                return `${year}.${kode}.001`;
+            /**
+             * Bangun daftar opsi kelas dari jurusan pilihan 1 dan pilihan 2 calon siswa.
+             * Hanya mengambil kelas yang berelasi dengan kedua jurusan tersebut.
+             */
+            buildKelasOptions(item) {
+                const options = [];
+                const seen = new Set();
+
+                const addKelas = (jurusanId, jurusanKode, jurusanNama) => {
+                    if (!jurusanId) return;
+                    const kelas = kelasByJurusan[jurusanId] ?? [];
+                    kelas.forEach(k => {
+                        if (seen.has(k.id)) return;
+                        seen.add(k.id);
+                        const prefix = jurusanKode ? `[${jurusanKode}] ` : '';
+                        options.push({
+                            id: k.id,
+                            label: `${prefix}${k.nama}`
+                        });
+                    });
+                };
+
+                // Pilihan 1
+                addKelas(item.jurusan_pilihan1_id, item.jurusan_pilihan1_kode, item.jurusan_pilihan1_nama);
+                // Pilihan 2
+                addKelas(item.jurusan_pilihan2_id, item.jurusan_pilihan2_kode, item.jurusan_pilihan2_nama);
+
+                return options;
             },
 
             isPdf(namaFile) {

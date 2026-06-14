@@ -51,10 +51,6 @@ class PendaftaranValidation
                     'regex_match' => 'Format nomor HP tidak valid. Contoh: 08123456789',
                 ],
             ],
-            'wa_verified' => [
-                'rules'  => 'permit_empty|in_list[0,1]',
-                'errors' => [],
-            ],
         ];
     }
 

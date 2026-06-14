@@ -5,6 +5,7 @@ namespace App\Modules\DaftarUlang\Controllers;
 use App\Controllers\BaseController;
 use App\Modules\DaftarUlang\Models\DaftarUlangModel;
 use App\Modules\Pendaftaran\Models\PendaftaranModel;
+use App\Modules\MasterData\Models\KelasModel;
 use App\Modules\Notifikasi\Services\NotifikasiService;
 use App\Libraries\FileUploader;
 
@@ -12,12 +13,14 @@ class DaftarUlangAdminController extends BaseController
 {
     protected DaftarUlangModel  $model;
     protected PendaftaranModel  $pendaftaranModel;
+    protected KelasModel        $kelasModel;
     protected NotifikasiService $notifService;
 
     public function __construct()
     {
         $this->model            = new DaftarUlangModel();
         $this->pendaftaranModel = new PendaftaranModel();
+        $this->kelasModel       = new KelasModel();
         $this->notifService     = new NotifikasiService();
     }
 
@@ -31,12 +34,24 @@ class DaftarUlangAdminController extends BaseController
         $daftars = $this->model->getAllWithRelations($status, $search);
         $stats   = $this->model->getStatsByStatus();
 
+        // Ambil semua kelas aktif beserta jurusan-nya untuk dipakai di dropdown
+        // kelas dikelompokkan per jurusan_id → dipass ke view sebagai JSON
+        $kelasList = $this->kelasModel->getWithJurusan();
+        $kelasByJurusan = [];
+        foreach ($kelasList as $k) {
+            $kelasByJurusan[$k->jurusan_id][] = [
+                'id'   => $k->id,
+                'nama' => $k->nama,
+            ];
+        }
+
         return $this->render('App\Modules\DaftarUlang\Views\admin_index', [
-            'title'   => 'Verifikasi Daftar Ulang',
-            'daftars' => $daftars,
-            'status'  => $status,
-            'search'  => $search,
-            'stats'   => $stats,
+            'title'          => 'Verifikasi Daftar Ulang',
+            'daftars'        => $daftars,
+            'status'         => $status,
+            'search'         => $search,
+            'stats'          => $stats,
+            'kelasByJurusan' => $kelasByJurusan,
         ]);
     }
 
@@ -81,10 +96,12 @@ class DaftarUlangAdminController extends BaseController
 
     // =========================================================
     // KONFIRMASI
-    // FIX: Tambahkan validasi uniqueness NIS sebelum menyimpan.
-    //      NIS yang sama tidak boleh diberikan ke dua siswa berbeda.
-    //      Tanpa validasi ini, dua siswa dengan NIS sama akan menyebabkan
-    //      Duplicate entry error saat konversi ke Buku Induk.
+    //
+    // PERUBAHAN: NIS tidak lagi diisi manual oleh admin.
+    // NIS akan di-generate otomatis oleh NISGenerator saat
+    // admin mengkonversi ke Buku Induk. Admin hanya perlu
+    // memilih Penempatan Kelas (opsional) dari dropdown kelas
+    // yang berasal dari pilihan 1 dan pilihan 2 calon siswa.
     // =========================================================
     public function konfirmasi(int $id)
     {
@@ -98,46 +115,22 @@ class DaftarUlangAdminController extends BaseController
             return redirect()->back()->with('error', 'Pengajuan ini sudah diproses sebelumnya.');
         }
 
-        $nis       = trim($this->request->getPost('nis') ?? '');
+        // Kelas dipilih dari dropdown (opsional) — kirim kelas_id + nama_kelas
+        $kelasId   = $this->request->getPost('kelas_id')   ?: null;
         $namaKelas = trim($this->request->getPost('nama_kelas') ?? '');
-        $kelasId   = $this->request->getPost('kelas_id') ?: $daftarUlang->kelas_id;
 
-        if (empty($nis)) {
-            return redirect()->back()->with('error', 'NIS wajib diisi sebelum mengkonfirmasi.');
+        // Jika kelas_id dipilih tapi nama_kelas kosong, ambil nama dari DB
+        if ($kelasId && empty($namaKelas)) {
+            $kelas = $this->kelasModel->find($kelasId);
+            if ($kelas) {
+                $namaKelas = $kelas->nama;
+            }
         }
-
-        // ── FIX: Validasi uniqueness NIS ────────────────────────────────────
-        // Cek apakah NIS sudah dipakai di buku_induks (siswa yang sudah dikonversi)
-        $db = db_connect();
-
-        $nisInBukuInduk = $db->table('buku_induks')
-            ->where('nis', $nis)
-            ->countAllResults();
-
-        if ($nisInBukuInduk > 0) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', "NIS '{$nis}' sudah digunakan oleh siswa lain di Buku Induk. Gunakan NIS yang berbeda.");
-        }
-
-        // Cek apakah NIS sudah dipakai di daftar_ulangs lain (dikonfirmasi, bukan record ini sendiri)
-        $nisInDaftarUlang = $db->table('daftar_ulangs')
-            ->where('nis', $nis)
-            ->where('status', DaftarUlangModel::STATUS_DIKONFIRMASI)
-            ->where('id !=', $id)
-            ->countAllResults();
-
-        if ($nisInDaftarUlang > 0) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', "NIS '{$nis}' sudah ditetapkan untuk calon siswa lain yang sedang diproses. Gunakan NIS yang berbeda.");
-        }
-        // ────────────────────────────────────────────────────────────────────
 
         // Update status daftar_ulangs → dikonfirmasi
+        // NIS sengaja TIDAK diisi di sini; akan diisi otomatis saat konversi ke Buku Induk
         $this->model->update($id, [
             'status'            => DaftarUlangModel::STATUS_DIKONFIRMASI,
-            'nis'               => $nis,
             'nama_kelas'        => $namaKelas ?: null,
             'kelas_id'          => $kelasId ?: null,
             'catatan_admin'     => $this->request->getPost('catatan_admin') ?? '',
@@ -151,11 +144,10 @@ class DaftarUlangAdminController extends BaseController
             $this->pendaftaranModel->updateStatus($daftarUlang->pendaftaran_id, 'daftar_ulang');
         }
 
-        // Notif ke siswa
-        $pesanNotif = "Pembayaran daftar ulang Anda telah dikonfirmasi! "
-            . "NIS sementara: {$nis}"
-            . ($namaKelas ? ", Kelas: {$namaKelas}" : "")
-            . ". Data Anda sedang diproses ke Buku Induk oleh Admin TU.";
+        // Notif ke siswa — NIS tidak disertakan karena belum digenerate
+        $pesanNotif = "Pembayaran daftar ulang Anda telah dikonfirmasi!"
+            . ($namaKelas ? " Penempatan kelas: {$namaKelas}." : "")
+            . " Data Anda sedang diproses ke Buku Induk oleh Admin TU. NIS akan diberikan setelah proses selesai.";
 
         $this->notifService->send(
             $daftarUlang->user_id,
@@ -165,8 +157,9 @@ class DaftarUlangAdminController extends BaseController
             ['url' => base_url('dashboard/daftar-ulang/status')]
         );
 
+        $msgKelas = $namaKelas ? " Penempatan kelas: {$namaKelas}." : "";
         return redirect()->to(base_url('admin/daftar-ulang'))
-            ->with('success', "Daftar ulang berhasil dikonfirmasi. NIS {$nis} telah ditetapkan. Silakan konversi ke Buku Induk.");
+            ->with('success', "Daftar ulang berhasil dikonfirmasi.{$msgKelas} NIS akan digenerate otomatis saat konversi ke Buku Induk.");
     }
 
     // =========================================================

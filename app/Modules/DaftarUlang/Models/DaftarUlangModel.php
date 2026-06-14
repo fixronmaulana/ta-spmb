@@ -13,13 +13,19 @@ class DaftarUlangModel extends Model
 
     // FIX: tambah kolom nis, nama_kelas, nama_file_bukti
     protected $allowedFields = [
-        'pendaftaran_id', 'user_id', 'kelas_id',
-        'nis',              // NIS yang ditetapkan admin
+        'pendaftaran_id',
+        'user_id',
+        'kelas_id',
+        'nis',              // NIS yang di-generate saat konversi ke buku induk (tidak diisi manual lagi)
         'nama_kelas',       // Nama kelas yang ditetapkan admin
         'bukti_pembayaran_path',
         'nama_file_bukti',  // Nama asli file bukti (untuk ditampilkan)
-        'nominal_pembayaran', 'catatan_siswa', 'status',
-        'catatan_admin', 'dikonfirmasi_oleh', 'dikonfirmasi_pada',
+        'nominal_pembayaran',
+        'catatan_siswa',
+        'status',
+        'catatan_admin',
+        'dikonfirmasi_oleh',
+        'dikonfirmasi_pada',
     ];
 
     // ── Status constants ─────────────────────────────────────────────────
@@ -32,29 +38,67 @@ class DaftarUlangModel extends Model
         return $this->where('pendaftaran_id', $pendaftaranId)->first();
     }
 
+    /**
+     * getWithRelations — include jurusan pilihan 1 & 2 dari pendaftaran,
+     * sehingga admin bisa menampilkan dropdown kelas berdasarkan pilihan calon siswa.
+     */
     public function getWithRelations(int $id): ?object
     {
-        return $this->select('daftar_ulangs.*, u.nama_lengkap as nama_calon, u.email as email_calon,
-                dds.nama_lengkap, j1.nama as jurusan_nama, j1.kode as jurusan_kode,
-                k.nama as kelas_nama_rel, p.no_pendaftaran')
+        return $this->select('
+                daftar_ulangs.*,
+                u.nama_lengkap AS nama_calon,
+                u.email        AS email_calon,
+                dds.nama_lengkap,
+                p.no_pendaftaran,
+                p.jurusan_pilihan1_id,
+                p.jurusan_pilihan2_id,
+                p.jurusan_diterima_id,
+                jd.nama AS jurusan_nama,
+                jd.kode AS jurusan_kode,
+                j1.nama AS jurusan_pilihan1_nama,
+                j1.kode AS jurusan_pilihan1_kode,
+                j2.nama AS jurusan_pilihan2_nama,
+                j2.kode AS jurusan_pilihan2_kode,
+                k.nama  AS kelas_nama_rel
+            ')
             ->join('users u',              'u.id = daftar_ulangs.user_id')
             ->join('pendaftaran p',        'p.id = daftar_ulangs.pendaftaran_id')
             ->join('data_diri_siswas dds', 'dds.pendaftaran_id = daftar_ulangs.pendaftaran_id', 'left')
-            ->join('jurusan j1',           'j1.id = p.jurusan_diterima_id', 'left')
-            ->join('kelas k',              'k.id = daftar_ulangs.kelas_id', 'left')
+            ->join('jurusan jd',           'jd.id = p.jurusan_diterima_id',   'left')
+            ->join('jurusan j1',           'j1.id = p.jurusan_pilihan1_id',   'left')
+            ->join('jurusan j2',           'j2.id = p.jurusan_pilihan2_id',   'left')
+            ->join('kelas k',              'k.id  = daftar_ulangs.kelas_id',  'left')
             ->find($id);
     }
 
+    /**
+     * getAllWithRelations — include jurusan pilihan 1 & 2 untuk keperluan
+     * modal validasi (populate dropdown kelas dari pilihan calon siswa).
+     */
     public function getAllWithRelations(string $status = '', string $search = ''): array
     {
-        $q = $this->select('daftar_ulangs.*, u.nama_lengkap as nama_calon, u.email as email_calon,
-                COALESCE(dds.nama_lengkap, u.nama_lengkap) as nama_tampil,
-                j1.nama as jurusan_nama, j1.kode as jurusan_kode,
-                p.no_pendaftaran')
+        $q = $this->select('
+                daftar_ulangs.*,
+                u.nama_lengkap AS nama_calon,
+                u.email        AS email_calon,
+                COALESCE(dds.nama_lengkap, u.nama_lengkap) AS nama_tampil,
+                p.no_pendaftaran,
+                p.jurusan_pilihan1_id,
+                p.jurusan_pilihan2_id,
+                p.jurusan_diterima_id,
+                jd.nama AS jurusan_nama,
+                jd.kode AS jurusan_kode,
+                j1.nama AS jurusan_pilihan1_nama,
+                j1.kode AS jurusan_pilihan1_kode,
+                j2.nama AS jurusan_pilihan2_nama,
+                j2.kode AS jurusan_pilihan2_kode
+            ')
             ->join('users u',              'u.id = daftar_ulangs.user_id')
             ->join('pendaftaran p',        'p.id = daftar_ulangs.pendaftaran_id')
             ->join('data_diri_siswas dds', 'dds.pendaftaran_id = daftar_ulangs.pendaftaran_id', 'left')
-            ->join('jurusan j1',           'j1.id = p.jurusan_diterima_id', 'left')
+            ->join('jurusan jd',           'jd.id = p.jurusan_diterima_id',   'left')
+            ->join('jurusan j1',           'j1.id = p.jurusan_pilihan1_id',   'left')
+            ->join('jurusan j2',           'j2.id = p.jurusan_pilihan2_id',   'left')
             ->orderBy('daftar_ulangs.created_at', 'DESC');
 
         if ($status) {
@@ -63,10 +107,10 @@ class DaftarUlangModel extends Model
 
         if ($search) {
             $q->groupStart()
-              ->like('u.nama_lengkap',            $search)
-              ->orLike('dds.nama_lengkap',         $search)
-              ->orLike('p.no_pendaftaran',          $search)
-              ->groupEnd();
+                ->like('u.nama_lengkap',   $search)
+                ->orLike('dds.nama_lengkap', $search)
+                ->orLike('p.no_pendaftaran', $search)
+                ->groupEnd();
         }
 
         return $q->findAll();
