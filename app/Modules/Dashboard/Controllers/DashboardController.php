@@ -245,27 +245,9 @@ class DashboardController extends BaseController
 
     private function getPeriodeInfo(?object $periode): array
     {
-        if (! $periode) {
-            return ['status' => 'closed', 'message' => 'Tidak ada periode aktif saat ini.'];
-        }
-
-        $today   = date('Y-m-d');
-        $mulai   = $periode->tanggal_mulai;
-        $selesai = $periode->tanggal_selesai;
-
-        if ($today < $mulai) {
-            return ['status' => 'soon', 'message' => 'PPDB akan dibuka pada ' . format_tanggal($mulai)];
-        }
-
-        if ($today > $selesai) {
-            return ['status' => 'closed', 'message' => 'Periode pendaftaran telah berakhir.'];
-        }
-
-        $sisa = (strtotime($selesai) - strtotime($today)) / 86400;
-        return [
-            'status'  => 'open',
-            'message' => 'Periode pendaftaran sedang berjalan. Berakhir ' . format_tanggal($selesai),
-            'sisa'    => (int) $sisa,
-        ];
+        // Delegasikan ke PeriodeModel::getStatusPendaftaran() — logika
+        // status open/soon/closed jadi satu sumber kebenaran yang sama
+        // dipakai juga untuk validasi BE di PendaftaranController.
+        return (new PeriodeModel())->getStatusPendaftaran($periode);
     }
 }

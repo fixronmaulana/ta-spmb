@@ -239,6 +239,13 @@ class BukuIndukController extends BaseController
 
     // =========================================================
     // KONVERSI PAGE
+    //
+    // PERBAIKAN: status "Valid" untuk konversi HARUS berdasarkan
+    // daftar_ulangs.status === 'dikonfirmasi' (admin TU sudah memverifikasi
+    // bukti pembayaran), BUKAN dari pendaftaran.status === 'daftar_ulang'.
+    // Sebelumnya, begitu siswa upload bukti pembayaran (pendaftaran.status
+    // langsung berubah ke 'daftar_ulang'), baris langsung tampil "✅ Valid"
+    // meskipun admin belum mengkonfirmasi apa pun di /admin/daftar-ulang.
     // =========================================================
     public function konversiPage()
     {
@@ -249,12 +256,14 @@ class BukuIndukController extends BaseController
                       dds.nama_lengkap, dds.nisn,
                       j.nama as jurusan_nama, j.kode as jurusan_kode, j.kode_nis,
                       bi.id as buku_induk_id, bi.nis,
-                      du.status as du_status, du.nis as du_nis, du.nama_kelas as du_kelas')
+                      du.id as daftar_ulang_id, du.status as du_status,
+                      du.nis as du_nis, du.nama_kelas as du_kelas,
+                      du.dikonfirmasi_pada as du_dikonfirmasi_pada')
             ->join('data_diri_siswas dds', 'dds.pendaftaran_id = pendaftaran.id', 'left')
             ->join('jurusan j',            'j.id = pendaftaran.jurusan_diterima_id', 'left')
             ->join('buku_induks bi',       'bi.pendaftaran_id = pendaftaran.id', 'left')
             ->join('daftar_ulangs du',     'du.pendaftaran_id = pendaftaran.id', 'left')
-            ->whereIn('pendaftaran.status', ['daftar_ulang', 'siswa_aktif'])
+            ->whereIn('pendaftaran.status', ['lulus', 'daftar_ulang', 'siswa_aktif'])
             ->orderBy('j.kode', 'ASC')
             ->orderBy('dds.nama_lengkap', 'ASC')
             ->findAll();

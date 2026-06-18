@@ -36,11 +36,18 @@ class PendaftaranService
         $existing = $this->pendaftaranModel->getByUserId($userId);
         if ($existing) return $existing;
 
-        $periode = $this->periodeModel->getPeriodeAktif();
+        // ── VALIDASI PERIODE AKTIF (defense in depth) ────────────
+                $statusPeriode = $this->periodeModel->getStatusPendaftaran();
+
+        if (! $statusPeriode['buka']) {
+            throw new \RuntimeException($statusPeriode['message']);
+        }
+
+        $periode = $statusPeriode['periode'];
 
         $id = $this->pendaftaranModel->insert([
             'user_id'       => $userId,
-            'periode_id'    => $periode ? $periode->id : null,
+            'periode_id'    => $periode->id,
             'status'        => 'draft',
             'step_terakhir' => 1,
         ]);

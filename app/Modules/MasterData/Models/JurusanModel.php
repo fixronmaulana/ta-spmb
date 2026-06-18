@@ -29,17 +29,21 @@ class JurusanModel extends Model
 
     // =========================================================
     // KUOTA: hitung berapa slot yang sudah terpakai per jurusan
+    //
+    // PERBAIKAN:
+    //   Sebelumnya dihitung dari jurusan_pilihan1_id → tidak akurat
+    //   karena calon siswa bisa diterima di jurusan pilihan 2.
+    //
+    //   Sekarang:
+    //   - Untuk status 'lulus', 'daftar_ulang', 'siswa_aktif'
+    //     → dihitung dari jurusan_diterima_id (jurusan yang BENAR-BENAR diterima)
+    //   - Untuk status antrian sebelum seleksi (submitted, verifikasi, seleksi)
+    //     → tetap dihitung dari jurusan_pilihan1_id (estimasi demand)
     // =========================================================
 
     /**
-     * Hitung jumlah pendaftar yang sudah "mengisi" kuota suatu jurusan
-     * pada periode tertentu (opsional).
-     *
-     * Yang dihitung = pendaftaran dengan status seleksi atau sudah diterima:
-     *   submitted, verifikasi, seleksi, lulus, daftar_ulang, siswa_aktif
-     * Status draft & tidak_lulus TIDAK dihitung (belum pasti / sudah gugur).
-     *
-     * Dihitung dari jurusan_pilihan1_id (pilihan utama).
+     * Hitung jumlah slot TERPAKAI (sudah ditetapkan lulus/diterima) per jurusan.
+     * Dihitung dari jurusan_diterima_id untuk status pasca-seleksi.
      *
      * @param  int      $jurusanId
      * @param  int|null $periodeId  null = semua periode
@@ -49,9 +53,34 @@ class JurusanModel extends Model
     {
         $db = db_connect();
 
+        // Siswa yang sudah ditetapkan LULUS dan masuk ke jurusan ini
+        $builderLulus = $db->table('pendaftaran')
+            ->where('jurusan_diterima_id', $jurusanId)
+            ->whereIn('status', ['lulus', 'daftar_ulang', 'siswa_aktif'])
+            ->where('deleted_at IS NULL');
+
+        if ($periodeId !== null) {
+            $builderLulus->where('periode_id', $periodeId);
+        }
+
+        return (int) $builderLulus->countAllResults();
+    }
+
+    /**
+     * Hitung estimasi demand (antrean) per jurusan dari pilihan 1.
+     * Digunakan untuk info dashboard, bukan untuk kuota.
+     *
+     * @param  int      $jurusanId
+     * @param  int|null $periodeId
+     * @return int
+     */
+    public function getEstimasiDemand(int $jurusanId, ?int $periodeId = null): int
+    {
+        $db = db_connect();
+
         $builder = $db->table('pendaftaran')
             ->where('jurusan_pilihan1_id', $jurusanId)
-            ->whereIn('status', ['submitted', 'verifikasi', 'revisi', 'seleksi', 'lulus', 'daftar_ulang', 'siswa_aktif'])
+            ->whereIn('status', ['submitted', 'verifikasi', 'seleksi'])
             ->where('deleted_at IS NULL');
 
         if ($periodeId !== null) {
@@ -62,11 +91,10 @@ class JurusanModel extends Model
     }
 
     /**
-     * Hitung sisa kuota = kuota - terpakai.
-     * Mengembalikan 0 jika sudah penuh atau melebihi kuota.
+     * Hitung sisa kuota = kuota - terpakai (dari jurusan_diterima_id).
      *
      * @param  int      $jurusanId
-     * @param  int      $kuota      Kuota maksimal jurusan ini
+     * @param  int      $kuota
      * @param  int|null $periodeId
      * @return int
      */
@@ -77,13 +105,13 @@ class JurusanModel extends Model
     }
 
     /**
-     * Ambil semua jurusan aktif beserta informasi kuota terpakai dan sisa.
-     * Digunakan di form step2 (tampilan ke pendaftar) dan di dashboard admin.
+     * Ambil semua jurusan aktif beserta kuota terpakai dan sisa.
+     * Digunakan di form step2 (tampilan ke pendaftar) dan dashboard admin.
      *
-     * Tiap object hasil memiliki properti tambahan:
-     *   ->terpakai   (int)  jumlah slot sudah diambil
-     *   ->sisa_kuota (int)  sisa slot tersisa
-     *   ->penuh      (bool) true jika sisa_kuota == 0
+     * Properti tambahan per object:
+     *   ->terpakai    (int)  jumlah slot sudah diterima (dari jurusan_diterima_id)
+     *   ->sisa_kuota  (int)  sisa slot tersisa
+     *   ->penuh       (bool) true jika sisa_kuota == 0
      *
      * @param  int|null $periodeId
      * @return array

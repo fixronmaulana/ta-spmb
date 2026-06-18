@@ -1,8 +1,19 @@
 <!--
     File : app/Modules/BukuInduk/Views/konversi.php
-    Sesuai mockup React : KonversiBukuIndukPage
--->
 
+    PERBAIKAN:
+    Badge "Status Daftar Ulang" sebelumnya hanya membaca pendaftaran.status
+    (kolom $s->status), padahal status itu cuma berubah jadi 'daftar_ulang'
+    begitu siswa MENGUPLOAD bukti pembayaran — bukan setelah admin TU
+    mengkonfirmasinya di menu /admin/daftar-ulang. Akibatnya baris langsung
+    tampil "✅ Valid" meski admin belum klik apa pun, padahal backend
+    (BukuIndukService::konversi) sebenarnya MENOLAK konversi untuk siswa
+    yang daftar_ulangs.status-nya masih 'pending'.
+
+    Sekarang badge dan validasi checkbox dibaca dari $s->du_status
+    (kolom daftar_ulangs.status yang sebenarnya: null/pending/dikonfirmasi/ditolak),
+    sehingga tampilan UI 100% konsisten dengan validasi backend.
+-->
 <div class="space-y-6" x-data="konversiPage()">
 
     <!-- ── Page Header ──────────────────────────────────────────── -->
@@ -36,7 +47,7 @@
         </svg>
         <div class="space-y-1 text-sm">
             <p class="font-semibold text-blue-900">Informasi Penting</p>
-            <p class="text-blue-800">Fitur ini akan memindahkan data pendaftar yang <strong>DITERIMA &amp; DAFTAR ULANG VALID</strong> ke tabel Buku Induk Siswa.</p>
+            <p class="text-blue-800">Fitur ini akan memindahkan data pendaftar yang <strong>DITERIMA &amp; sudah DIKONFIRMASI admin di menu Daftar Ulang</strong> ke tabel Buku Induk Siswa.</p>
             <p class="text-blue-800">Data akan otomatis ter-generate dengan NIS (Nomor Induk Siswa) yang unik.</p>
             <p class="font-semibold text-amber-700">⚠️ Proses ini TIDAK BISA DIUNDO. Pastikan data sudah benar sebelum melanjutkan.</p>
         </div>
@@ -60,14 +71,32 @@
                 </svg>
             </div>
 
-            <!-- Count badge -->
+            <!-- Count badge — PERBAIKAN: hitung dari du_status === 'dikonfirmasi', bukan dari pendaftaran.status -->
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-800">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <?= count(array_filter($siapKonversi, fn($s) => is_null($s->buku_induk_id))) ?> siswa siap dikonversi
+                <?= count(array_filter($siapKonversi, fn($s) => is_null($s->buku_induk_id) && $s->du_status === 'dikonfirmasi')) ?> siswa siap dikonversi
             </span>
         </div>
+
+        <?php
+        $countPending = count(array_filter($siapKonversi, fn($s) => is_null($s->buku_induk_id) && $s->du_status === 'pending'));
+        $countDitolak = count(array_filter($siapKonversi, fn($s) => is_null($s->buku_induk_id) && $s->du_status === 'ditolak'));
+        $countBelumDU = count(array_filter($siapKonversi, fn($s) => is_null($s->buku_induk_id) && empty($s->du_status)));
+        ?>
+        <?php if ($countPending > 0 || $countDitolak > 0): ?>
+            <div class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                <?php if ($countPending > 0): ?>
+                    <span>⏳ <strong class="text-amber-700"><?= $countPending ?></strong> siswa menunggu verifikasi di
+                        <a href="<?= base_url('admin/daftar-ulang') ?>" class="underline hover:text-amber-800">menu Daftar Ulang</a>
+                    </span>
+                <?php endif; ?>
+                <?php if ($countDitolak > 0): ?>
+                    <span>✗ <strong class="text-red-700"><?= $countDitolak ?></strong> bukti pembayaran ditolak, menunggu upload ulang dari siswa</span>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- ── Preview Table Card ────────────────────────────────────── -->
@@ -107,8 +136,12 @@
                     <?php foreach ($siapKonversi as $idx => $s):
                         $sudahKonversi  = !is_null($s->buku_induk_id);
                         $belumKonversi  = is_null($s->buku_induk_id);
-                        $statusDU       = $s->status; // lulus / daftar_ulang / siswa_aktif
-                        $isValid        = $statusDU === 'daftar_ulang' && $belumKonversi;
+
+                        // PERBAIKAN: status valid HARUS dari daftar_ulangs.status === 'dikonfirmasi',
+                        // bukan dari pendaftaran.status. pendaftaran.status hanya menandakan siswa
+                        // SUDAH MENGUPLOAD bukti (belum tentu sudah diverifikasi admin TU).
+                        $duStatus       = $s->du_status; // null | pending | dikonfirmasi | ditolak
+                        $isValid        = $duStatus === 'dikonfirmasi' && $belumKonversi;
                     ?>
                         <tr class="border-b border-gray-50 last:border-0 transition-colors"
                             :class="selectedIds.includes('<?= $s->id ?>') ? 'bg-blue-50/50' : 'hover:bg-gray-50'"
@@ -146,23 +179,28 @@
                                 </span>
                             </td>
 
-                            <!-- Status Daftar Ulang -->
+                            <!-- Status Daftar Ulang — dibaca dari daftar_ulangs.status (du_status) -->
                             <td class="py-3 px-4">
                                 <?php if ($sudahKonversi): ?>
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
                                         NIS: <?= esc($s->nis ?? '-') ?>
                                     </span>
-                                <?php elseif ($statusDU === 'daftar_ulang'): ?>
+                                <?php elseif ($duStatus === 'dikonfirmasi'): ?>
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                        ✅ Valid
+                                        ✅ Valid — Siap Dikonversi
                                     </span>
-                                <?php elseif ($statusDU === 'lulus'): ?>
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-                                        ⏳ Belum Daftar Ulang
+                                <?php elseif ($duStatus === 'pending'): ?>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                        ⏳ Menunggu Verifikasi Admin
+                                    </span>
+                                <?php elseif ($duStatus === 'ditolak'): ?>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                        ✗ Bukti Ditolak
                                     </span>
                                 <?php else: ?>
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                                        <?= ucwords(str_replace('_', ' ', $statusDU)) ?>
+                                    <!-- du_status null = siswa belum upload bukti pembayaran sama sekali -->
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                                        Belum Daftar Ulang
                                     </span>
                                 <?php endif; ?>
                             </td>

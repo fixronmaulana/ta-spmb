@@ -3,6 +3,7 @@
 namespace App\Modules\Pendaftaran\Controllers;
 
 use App\Controllers\BaseController;
+use App\Modules\MasterData\Models\PeriodeModel;
 use App\Modules\Pendaftaran\Models\PendaftaranModel;
 use App\Modules\Pendaftaran\Models\DokumenModel;
 use App\Libraries\FileUploader;
@@ -44,6 +45,14 @@ class DokumenController extends BaseController
 
         if (! $pendaftaran || ! in_array($pendaftaran->status, ['draft', 'revisi'])) {
             return $this->jsonError('Pendaftaran tidak dapat diedit.');
+        }
+
+        // ── VALIDASI PERIODE AKTIF (BE) ──────────────────────────
+        // Upload dokumen awal adalah bagian dari pengisian formulir,
+        // jadi harus ikut terkunci begitu periode pendaftaran ditutup.
+        $periodeModel = new PeriodeModel();
+        if (! $periodeModel->getStatusPendaftaran()['buka']) {
+            return $this->jsonError('Periode pendaftaran sudah ditutup. Upload dokumen tidak dapat dilakukan lagi.');
         }
 
         return $this->prosesUpload($pendaftaran, false);

@@ -56,6 +56,12 @@ $variantStyle = [
 ];
 $qaStyle = $variantStyle[$qa['variant']] ?? $variantStyle['primary'];
 
+// ── Validasi periode (FE): apakah tombol ini mengarah ke formulir
+//    pengisian, dan apakah periode pendaftaran sedang dibuka? ────
+$isFormulirCta = ($qa['url'] === base_url('dashboard/formulir'));
+$periodeBuka   = ($periodeInfo['status'] ?? null) === 'open';
+
+
 // ── Announcements (static, matches React array) ────────────────
 $announcements = [
     ['text' => 'Batas waktu pengumpulan berkas gelombang 1: 31 Maret 2026', 'date' => '25 Jan 2026'],
@@ -257,16 +263,25 @@ function dashIcon(string $name, string $cls = 'w-6 h-6'): string
             <h2 class="font-semibold mb-4" style="color:hsl(220,54%,15%);">Aksi Cepat</h2>
 
             <!-- Button (mirrors <Button size="lg" variant={...}>) -->
-            <a href="<?= $qa['url'] ?>"
-                class="flex items-center gap-2 w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all"
-                style="<?= $qaStyle ?>"
-                onmouseover="this.style.filter='brightness(1.1)'"
-                onmouseout="this.style.filter='brightness(1)'">
-                <span class="flex-shrink-0"><?= dashIcon($qa['icon'], 'w-5 h-5') ?></span>
-                <span class="flex-1"><?= esc($qa['label']) ?></span>
-                <!-- ArrowRight ml-auto -->
-                <span class="ml-auto flex-shrink-0"><?= dashIcon('arrow-right', 'w-4 h-4') ?></span>
-            </a>
+            <?php if ($isFormulirCta && ! $periodeBuka): ?>
+                <div class="flex items-center gap-2 w-full py-3 px-4 rounded-xl font-semibold text-sm"
+                    style="background:hsl(220,20%,93%);color:hsl(220,15%,50%);cursor:not-allowed;"
+                    title="<?= esc($periodeInfo['message'] ?? 'Pendaftaran belum/tidak dibuka') ?>">
+                    <span class="flex-shrink-0"><?= dashIcon('file-edit', 'w-5 h-5') ?></span>
+                    <span class="flex-1">Pendaftaran Belum/Tidak Dibuka</span>
+                </div>
+            <?php else: ?>
+                <a href="<?= $qa['url'] ?>"
+                    class="flex items-center gap-2 w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all"
+                    style="<?= $qaStyle ?>"
+                    onmouseover="this.style.filter='brightness(1.1)'"
+                    onmouseout="this.style.filter='brightness(1)'">
+                    <span class="flex-shrink-0"><?= dashIcon($qa['icon'], 'w-5 h-5') ?></span>
+                    <span class="flex-1"><?= esc($qa['label']) ?></span>
+                    <!-- ArrowRight ml-auto -->
+                    <span class="ml-auto flex-shrink-0"><?= dashIcon('arrow-right', 'w-4 h-4') ?></span>
+                </a>
+            <?php endif; ?>
 
             <!-- Period info pill (bonus: tidak ada di React mockup tapi berguna) -->
             <?php if (!empty($periodeInfo)): ?>
@@ -299,14 +314,25 @@ function dashIcon(string $name, string $cls = 'w-6 h-6'): string
             <p class="text-sm mb-5" style="color:hsl(220,15%,50%);">
                 Mulai isi formulir pendaftaran untuk mendaftar ke SMK Al-Munawwir IIBS
             </p>
-            <a href="<?= base_url('dashboard/formulir') ?>"
-                class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white rounded-xl transition-all"
-                style="background:hsl(220,54%,20%);"
-                onmouseover="this.style.background='hsl(220,54%,30%)'"
-                onmouseout="this.style.background='hsl(220,54%,20%)'">
-                <?= dashIcon('plus', 'w-4 h-4') ?>
-                Mulai Isi Formulir
-            </a>
+            <?php if ($periodeBuka): ?>
+                <a href="<?= base_url('dashboard/formulir') ?>"
+                    class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white rounded-xl transition-all"
+                    style="background:hsl(220,54%,20%);"
+                    onmouseover="this.style.background='hsl(220,54%,30%)'"
+                    onmouseout="this.style.background='hsl(220,54%,20%)'">
+                    <?= dashIcon('plus', 'w-4 h-4') ?>
+                    Mulai Isi Formulir
+                </a>
+            <?php else: ?>
+                <div class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl"
+                    style="background:hsl(220,20%,93%);color:hsl(220,15%,50%);cursor:not-allowed;">
+                    <?= dashIcon('plus', 'w-4 h-4') ?>
+                    Pendaftaran Belum/Tidak Dibuka
+                </div>
+                <p class="text-xs mt-3" style="color:hsl(220,15%,55%);">
+                    <?= esc($periodeInfo['message'] ?? 'Tidak ada periode pendaftaran yang aktif saat ini.') ?>
+                </p>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 

@@ -32,11 +32,26 @@ class PendaftaranController extends BaseController
     // =========================================================
     public function index()
     {
-        $pendaftaran = $this->service->getOrCreate($this->userId());
+        $pendaftaran = $this->pendaftaranModel->getByUserId($this->userId());
 
-        if (! in_array($pendaftaran->status, ['draft', 'revisi'])) {
+        // Sudah pernah disubmit → tidak perlu cek periode, langsung ke status.
+        if ($pendaftaran && ! in_array($pendaftaran->status, ['draft', 'revisi'])) {
             return redirect()->to(base_url('dashboard/status'));
         }
+
+        // ── VALIDASI PERIODE AKTIF (BE) ──────────────────────────
+        // Formulir (baru maupun draft yang belum disubmit) hanya boleh
+        // diakses jika ada periode SPMB yang aktif dan sedang berjalan
+        // (is_active = 1 DAN hari ini di antara tanggal_mulai - tanggal_selesai).
+        $periodeModel  = new PeriodeModel();
+        $statusPeriode = $periodeModel->getStatusPendaftaran();
+
+        if (! $statusPeriode['buka']) {
+            return redirect()->to(base_url('dashboard'))
+                ->with('error', $statusPeriode['message']);
+        }
+
+        $pendaftaran = $this->service->getOrCreate($this->userId());
 
         $step = max(1, min(4, $pendaftaran->step_terakhir ?? 1));
         return redirect()->to(base_url("dashboard/formulir/step/{$step}"));
@@ -51,12 +66,26 @@ class PendaftaranController extends BaseController
             return redirect()->to(base_url('dashboard/formulir'));
         }
 
-        $pendaftaran = $this->service->getOrCreate($this->userId());
+        $pendaftaranCek = $this->pendaftaranModel->getByUserId($this->userId());
 
-        if (! in_array($pendaftaran->status, ['draft', 'revisi'])) {
+        // Sudah pernah disubmit → tidak perlu cek periode, tidak bisa diedit lagi.
+        if ($pendaftaranCek && ! in_array($pendaftaranCek->status, ['draft', 'revisi'])) {
             return redirect()->to(base_url('dashboard/status'))
                 ->with('info', 'Formulir sudah disubmit dan tidak dapat diedit.');
         }
+
+        // ── VALIDASI PERIODE AKTIF (BE) ──────────────────────────
+        // Termasuk untuk draft yang sudah ada: jika periode ditutup
+        // setelah siswa mulai mengisi, akses step selanjutnya tetap diblokir.
+        $periodeModel  = new PeriodeModel();
+        $statusPeriode = $periodeModel->getStatusPendaftaran();
+
+        if (! $statusPeriode['buka']) {
+            return redirect()->to(base_url('dashboard'))
+                ->with('error', $statusPeriode['message']);
+        }
+
+        $pendaftaran = $this->service->getOrCreate($this->userId());
 
         $dataDiri  = $this->dataDiriModel->getByPendaftaranId($pendaftaran->id);
         $dokumens  = $this->dokumenModel->getByPendaftaranId($pendaftaran->id);
@@ -104,7 +133,25 @@ class PendaftaranController extends BaseController
             return redirect()->to(base_url('dashboard/status'))
                 ->with('error', 'Formulir tidak dapat diedit.');
         }
-        
+
+        // ── VALIDASI PERIODE AKTIF (BE) ──────────────────────────
+        // Mencegah simpan/submit step (termasuk submit akhir step 4)
+        // setelah periode SPMB ditutup, walau request berhasil sampai
+        // ke endpoint ini (misal tab dibiarkan terbuka lama).
+        $periodeModel  = new PeriodeModel();
+        $statusPeriode = $periodeModel->getStatusPendaftaran();
+
+        if (! $statusPeriode['buka']) {
+            if ($isAjax) {
+                return $this->response->setStatusCode(422)->setJSON([
+                    'success' => false,
+                    'message' => $statusPeriode['message'],
+                ]);
+            }
+            return redirect()->to(base_url('dashboard'))
+                ->with('error', $statusPeriode['message']);
+        }
+
         $rules = PendaftaranValidation::getRulesForStep($stepNum);
 
         if (! empty($rules) && ! $this->validate($rules)) {
@@ -196,6 +243,15 @@ class PendaftaranController extends BaseController
             return $this->response->setStatusCode(422)->setJSON([
                 'success' => false,
                 'message' => 'Pendaftaran tidak ditemukan',
+            ]);
+        }
+
+        // ── VALIDASI PERIODE AKTIF (BE) ──────────────────────────
+        $periodeModel = new PeriodeModel();
+        if (! $periodeModel->getStatusPendaftaran()['buka']) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'success' => false,
+                'message' => 'Periode pendaftaran sudah ditutup. Draft tidak dapat disimpan lagi.',
             ]);
         }
 

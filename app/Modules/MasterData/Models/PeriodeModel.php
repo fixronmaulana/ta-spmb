@@ -30,6 +30,85 @@ class PeriodeModel extends Model
         return $this->where('is_active', 1)->first();
     }
 
+    // =========================================================
+    // VALIDASI PERIODE PENDAFTARAN — untuk memblokir
+    // akses formulir saat periode belum/tidak aktif.
+    // =========================================================
+
+    /**
+     * Tentukan status pendaftaran berdasarkan periode aktif (is_active=1)
+     * DAN rentang tanggal_mulai - tanggal_selesai.
+     *
+     * Periode bisa saja di-set is_active=1 oleh admin tapi tanggal hari ini
+     * sudah lewat tanggal_selesai (lupa dimatikan), atau belum masuk
+     * tanggal_mulai (periode disiapkan lebih awal) — keduanya tetap harus
+     * dianggap TUTUP untuk pengisian formulir.
+     *
+     * @param object|null $periode Opsional, lempar periode yang sudah di-fetch
+     *                              agar tidak query ulang (misal dari controller lain).
+     *
+     * @return array{
+     *     buka: bool,
+     *     status: string,   // 'open' | 'soon' | 'closed'
+     *     message: string,
+     *     sisa?: int,
+     *     periode: object|null
+     * }
+     */
+    public function getStatusPendaftaran(?object $periode = null): array
+    {
+        $periode = $periode ?? $this->getPeriodeAktif();
+
+        if (! $periode) {
+            return [
+                'buka'    => false,
+                'status'  => 'closed',
+                'message' => 'Pendaftaran belum dibuka. Belum ada periode SPMB yang diaktifkan oleh panitia.',
+                'periode' => null,
+            ];
+        }
+
+        $today   = date('Y-m-d');
+        $mulai   = $periode->tanggal_mulai;
+        $selesai = $periode->tanggal_selesai;
+
+        if ($today < $mulai) {
+            return [
+                'buka'    => false,
+                'status'  => 'soon',
+                'message' => "Pendaftaran belum dibuka. PPDB {$periode->nama} akan dibuka pada " . format_tanggal($mulai) . '.',
+                'periode' => $periode,
+            ];
+        }
+
+        if ($today > $selesai) {
+            return [
+                'buka'    => false,
+                'status'  => 'closed',
+                'message' => "Periode pendaftaran {$periode->nama} telah berakhir pada " . format_tanggal($selesai) . '.',
+                'periode' => $periode,
+            ];
+        }
+
+        $sisa = (int) ((strtotime($selesai) - strtotime($today)) / 86400);
+
+        return [
+            'buka'    => true,
+            'status'  => 'open',
+            'message' => 'Periode pendaftaran sedang berjalan. Berakhir ' . format_tanggal($selesai) . '.',
+            'sisa'    => $sisa,
+            'periode' => $periode,
+        ];
+    }
+
+    /**
+     * Shortcut boolean: apakah pendaftaran sedang dibuka saat ini?
+     */
+    public function isPendaftaranDibuka(): bool
+    {
+        return $this->getStatusPendaftaran()['buka'];
+    }
+
     /**
      * Aktifkan periode ini, nonaktifkan yang lain.
      */
