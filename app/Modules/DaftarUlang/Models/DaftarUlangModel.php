@@ -33,7 +33,7 @@ class DaftarUlangModel extends Model
     const STATUS_DITOLAK      = 'ditolak';
 
     // =========================================================
-    // FIX #3: getByPendaftaranId sekarang ambil yang TERBARU
+    // getByPendaftaranId sekarang ambil yang TERBARU
     // (dipakai untuk cek status terkini / redirect guard)
     // =========================================================
     public function getByPendaftaranId(int $pendaftaranId): ?object
@@ -44,7 +44,7 @@ class DaftarUlangModel extends Model
     }
 
     /**
-     * FIX #3: Ambil semua riwayat daftar ulang satu pendaftar,
+     * Ambil semua riwayat daftar ulang satu pendaftar,
      * diurutkan dari yang terbaru.
      */
     public function getHistoryByPendaftaranId(int $pendaftaranId): array
@@ -55,7 +55,7 @@ class DaftarUlangModel extends Model
     }
 
     /**
-     * FIX #3: Cek apakah ada row dengan status dikonfirmasi
+     * Cek apakah ada row dengan status dikonfirmasi
      * untuk pendaftaran ini (kunci agar tidak bisa submit ulang
      * setelah dikonfirmasi).
      */
@@ -67,7 +67,7 @@ class DaftarUlangModel extends Model
     }
 
     /**
-     * FIX #3: Cek apakah ada row dengan status PENDING (sedang diproses).
+     * Cek apakah ada row dengan status PENDING (sedang diproses).
      * Dipakai untuk mencegah double submit.
      */
     public function getPendingByPendaftaranId(int $pendaftaranId): ?object

@@ -1,18 +1,5 @@
 <!--
     File : app/Modules/BukuInduk/Views/konversi.php
-
-    PERBAIKAN:
-    Badge "Status Daftar Ulang" sebelumnya hanya membaca pendaftaran.status
-    (kolom $s->status), padahal status itu cuma berubah jadi 'daftar_ulang'
-    begitu siswa MENGUPLOAD bukti pembayaran — bukan setelah admin TU
-    mengkonfirmasinya di menu /admin/daftar-ulang. Akibatnya baris langsung
-    tampil "✅ Valid" meski admin belum klik apa pun, padahal backend
-    (BukuIndukService::konversi) sebenarnya MENOLAK konversi untuk siswa
-    yang daftar_ulangs.status-nya masih 'pending'.
-
-    Sekarang badge dan validasi checkbox dibaca dari $s->du_status
-    (kolom daftar_ulangs.status yang sebenarnya: null/pending/dikonfirmasi/ditolak),
-    sehingga tampilan UI 100% konsisten dengan validasi backend.
 -->
 <div class="space-y-6" x-data="konversiPage()">
 
@@ -81,19 +68,21 @@
         </div>
 
         <?php
+        // FIX: $siapKonversi sekarang TIDAK mengandung row status 'ditolak' sama sekali
+        // (sudah difilter di query backend dengan subquery JOIN 'dikonfirmasi' only).
+        // countDitolak selalu 0. Kita hitung pending dan belum DU saja.
         $countPending = count(array_filter($siapKonversi, fn($s) => is_null($s->buku_induk_id) && $s->du_status === 'pending'));
-        $countDitolak = count(array_filter($siapKonversi, fn($s) => is_null($s->buku_induk_id) && $s->du_status === 'ditolak'));
         $countBelumDU = count(array_filter($siapKonversi, fn($s) => is_null($s->buku_induk_id) && empty($s->du_status)));
         ?>
-        <?php if ($countPending > 0 || $countDitolak > 0): ?>
+        <?php if ($countPending > 0 || $countBelumDU > 0): ?>
             <div class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                 <?php if ($countPending > 0): ?>
                     <span>⏳ <strong class="text-amber-700"><?= $countPending ?></strong> siswa menunggu verifikasi di
                         <a href="<?= base_url('admin/daftar-ulang') ?>" class="underline hover:text-amber-800">menu Daftar Ulang</a>
                     </span>
                 <?php endif; ?>
-                <?php if ($countDitolak > 0): ?>
-                    <span>✗ <strong class="text-red-700"><?= $countDitolak ?></strong> bukti pembayaran ditolak, menunggu upload ulang dari siswa</span>
+                <?php if ($countBelumDU > 0): ?>
+                    <span>📋 <strong class="text-gray-600"><?= $countBelumDU ?></strong> siswa belum mengajukan daftar ulang</span>
                 <?php endif; ?>
             </div>
         <?php endif; ?>

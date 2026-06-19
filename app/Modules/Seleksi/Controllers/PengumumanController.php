@@ -120,14 +120,16 @@ class PengumumanController extends BaseController
                   AND p.status      IN ('lulus', 'tidak_lulus')
                   AND p.deleted_at  IS NULL
                   AND (
-                        p.no_pendaftaran LIKE ?
-                     OR d.nama_lengkap   LIKE ?
+                        p.no_pendaftaran  LIKE ?
+                     OR d.nama_lengkap    LIKE ?
+                     OR d.nama_panggilan  LIKE ?
                   )
                 LIMIT 1
             ";
             $result = $db->query($sql, [
                 $pendaftaranSaya->id,
                 $periodeAktif->id,
+                $like,
                 $like,
                 $like,
             ])->getRowObject();
@@ -156,13 +158,15 @@ class PengumumanController extends BaseController
                   AND p.status      IN ('lulus', 'tidak_lulus')
                   AND p.deleted_at  IS NULL
                   AND (
-                        p.no_pendaftaran LIKE ?
-                     OR d.nama_lengkap   LIKE ?
+                        p.no_pendaftaran  LIKE ?
+                     OR d.nama_lengkap    LIKE ?
+                     OR d.nama_panggilan  LIKE ?
                   )
                 LIMIT 1
             ";
             $result = $db->query($sql, [
                 $periodeAktif->id,
+                $like,
                 $like,
                 $like,
             ])->getRowObject();

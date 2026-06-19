@@ -2,11 +2,6 @@
 
 /**
  * View: App\Modules\Seleksi\Views\pengumuman.php
- *
- * Variabel dari PengumumanController::index():
- *   $pendaftaran  — object|null  (data pendaftaran user yg login, sudah getWithRelations)
- *   $periodeAktif — object|null  (periode aktif dari PeriodeModel)
- *   $isPublished  — bool         (apakah pengumuman sudah dipublikasikan)
  */
 
 $p = $pendaftaran;
@@ -243,7 +238,7 @@ $userDiterima = $p && $p->status === 'lulus';
                         <div>
                             <p class="text-sm font-semibold mb-0.5" style="color:hsl(0,55%,40%);">Data Tidak Ditemukan</p>
                             <p class="text-xs" style="color:hsl(220,15%,50%);"
-                                x-text="errorMsg || 'Nomor pendaftaran atau nama yang Anda masukkan tidak ditemukan. Pastikan data yang dimasukkan benar.'">
+                                x-text="errorMsg || 'Nomor pendaftaran, nama lengkap, atau nama panggilan yang Anda masukkan tidak ditemukan. Pastikan data yang dimasukkan benar.'">
                             </p>
                         </div>
                     </div>
@@ -425,9 +420,6 @@ $userDiterima = $p && $p->status === 'lulus';
                 try {
                     const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
-                    // FIX: Tambah header 'X-Requested-With' agar CI4 isAJAX() = true.
-                    // fetch() browser tidak mengirim header ini secara default,
-                    // sehingga controller sebelumnya selalu return 400 → tidak ada hasil.
                     const res = await fetch('<?= base_url('dashboard/pengumuman/cari') ?>', {
                         method: 'POST',
                         headers: {

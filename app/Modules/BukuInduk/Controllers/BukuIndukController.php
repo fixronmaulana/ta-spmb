@@ -239,34 +239,42 @@ class BukuIndukController extends BaseController
 
     // =========================================================
     // KONVERSI PAGE
-    //
-    // PERBAIKAN: status "Valid" untuk konversi HARUS berdasarkan
-    // daftar_ulangs.status === 'dikonfirmasi' (admin TU sudah memverifikasi
-    // bukti pembayaran), BUKAN dari pendaftaran.status === 'daftar_ulang'.
-    // Sebelumnya, begitu siswa upload bukti pembayaran (pendaftaran.status
-    // langsung berubah ke 'daftar_ulang'), baris langsung tampil "✅ Valid"
-    // meskipun admin belum mengkonfirmasi apa pun di /admin/daftar-ulang.
     // =========================================================
     public function konversiPage()
     {
-        $pendaftaranM = new PendaftaranModel();
-        $siapKonversi = $pendaftaranM
-            ->select('pendaftaran.id, pendaftaran.no_pendaftaran, pendaftaran.status,
-                      pendaftaran.jurusan_diterima_id,
-                      dds.nama_lengkap, dds.nisn,
-                      j.nama as jurusan_nama, j.kode as jurusan_kode, j.kode_nis,
-                      bi.id as buku_induk_id, bi.nis,
-                      du.id as daftar_ulang_id, du.status as du_status,
-                      du.nis as du_nis, du.nama_kelas as du_kelas,
-                      du.dikonfirmasi_pada as du_dikonfirmasi_pada')
-            ->join('data_diri_siswas dds', 'dds.pendaftaran_id = pendaftaran.id', 'left')
-            ->join('jurusan j',            'j.id = pendaftaran.jurusan_diterima_id', 'left')
-            ->join('buku_induks bi',       'bi.pendaftaran_id = pendaftaran.id', 'left')
-            ->join('daftar_ulangs du',     'du.pendaftaran_id = pendaftaran.id', 'left')
-            ->whereIn('pendaftaran.status', ['lulus', 'daftar_ulang', 'siswa_aktif'])
-            ->orderBy('j.kode', 'ASC')
-            ->orderBy('dds.nama_lengkap', 'ASC')
-            ->findAll();
+        $db = db_connect();
+        
+        $siapKonversi = $db->query("
+            SELECT
+                p.id,
+                p.no_pendaftaran,
+                p.status,
+                p.jurusan_diterima_id,
+                dds.nama_lengkap,
+                dds.nisn,
+                j.nama   AS jurusan_nama,
+                j.kode   AS jurusan_kode,
+                j.kode_nis,
+                bi.id    AS buku_induk_id,
+                bi.nis,
+                du.id    AS daftar_ulang_id,
+                du.status AS du_status,
+                du.nis   AS du_nis,
+                du.nama_kelas AS du_kelas,
+                du.dikonfirmasi_pada AS du_dikonfirmasi_pada
+            FROM pendaftaran p
+            LEFT JOIN data_diri_siswas dds ON dds.pendaftaran_id = p.id
+            LEFT JOIN jurusan j            ON j.id = p.jurusan_diterima_id
+            LEFT JOIN buku_induks bi       ON bi.pendaftaran_id = p.id
+            LEFT JOIN (
+                SELECT pendaftaran_id, id, status, nis, nama_kelas, dikonfirmasi_pada
+                FROM daftar_ulangs
+                WHERE status = 'dikonfirmasi'
+                ORDER BY id DESC
+            ) du ON du.pendaftaran_id = p.id
+            WHERE p.status IN ('lulus','daftar_ulang','siswa_aktif')
+            ORDER BY j.kode ASC, dds.nama_lengkap ASC
+        ")->getResultObject();
 
         $jurusans  = (new JurusanModel())->getAllActive();
         $kelasList = (new KelasModel())->getWithJurusan();
@@ -300,9 +308,6 @@ class BukuIndukController extends BaseController
 
     // =========================================================
     // KONVERSI BULK SELECTED
-    // FIX: Gunakan flash 'warning' jika ada campuran sukses/gagal,
-    //      dan 'error' jika semua gagal. Sebelumnya selalu pakai 'success'
-    //      sehingga notifikasi hijau muncul meski konversi gagal semua.
     // =========================================================
     public function konversiBulkSelected()
     {
@@ -312,11 +317,33 @@ class BukuIndukController extends BaseController
             return redirect()->back()->with('error', 'Pilih minimal 1 siswa untuk dikonversi.');
         }
 
+        $duModel        = new \App\Modules\DaftarUlang\Models\DaftarUlangModel();
+        $validIds       = [];
+        $invalidSkipped = 0;
+
+        foreach ($pendaftaranIds as $pid) {
+            $pid = (int) $pid;
+            $du  = $duModel->getDikonfirmasiByPendaftaranId($pid);
+            if ($du) {
+                $validIds[] = $pid;
+            } else {
+                $invalidSkipped++;
+            }
+        }
+
+        if (empty($validIds)) {
+            return redirect()->back()->with(
+                'error',
+                'Tidak ada siswa yang valid untuk dikonversi. ' .
+                    'Pastikan daftar ulang sudah dikonfirmasi admin terlebih dahulu.'
+            );
+        }
+
         $berhasil = 0;
         $gagal    = 0;
         $errors   = [];
 
-        foreach ($pendaftaranIds as $pid) {
+        foreach ($validIds as $pid) {
             $result = $this->service->konversi((int) $pid, $this->userId());
             if ($result['success']) {
                 $berhasil++;
@@ -326,20 +353,18 @@ class BukuIndukController extends BaseController
             }
         }
 
-        // FIX: Tentukan jenis flash sesuai hasil nyata
+        $skipNote = $invalidSkipped > 0 ? " ({$invalidSkipped} dilewati karena daftar ulang belum dikonfirmasi)" : '';
+
         if ($berhasil > 0 && $gagal === 0) {
-            // Semua berhasil → hijau (success)
             $flashType = 'success';
-            $msg = "Berhasil mengkonversi {$berhasil} siswa ke Buku Induk!";
+            $msg = "Berhasil mengkonversi {$berhasil} siswa ke Buku Induk!{$skipNote}";
         } elseif ($berhasil > 0 && $gagal > 0) {
-            // Sebagian berhasil → kuning (warning)
             $flashType = 'warning';
-            $msg = "{$berhasil} siswa berhasil dikonversi, {$gagal} gagal: "
+            $msg = "{$berhasil} siswa berhasil dikonversi, {$gagal} gagal{$skipNote}: "
                 . implode(' | ', array_slice($errors, 0, 3));
         } else {
-            // Semua gagal → merah (error)
             $flashType = 'error';
-            $msg = "Konversi gagal untuk semua {$gagal} siswa: "
+            $msg = "Konversi gagal untuk semua {$gagal} siswa{$skipNote}: "
                 . implode(' | ', array_slice($errors, 0, 3));
         }
 
@@ -348,7 +373,6 @@ class BukuIndukController extends BaseController
 
     // =========================================================
     // KONVERSI BULK ALL
-    // FIX: Sama seperti di atas — flash type sesuai hasil
     // =========================================================
     public function konversiBulk()
     {
