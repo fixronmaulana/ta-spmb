@@ -9,6 +9,59 @@ use App\Modules\MasterData\Models\JurusanModel;
 use App\Modules\MasterData\Models\PeriodeModel;
 use App\Modules\Notifikasi\Services\NotifikasiService;
 
+/**
+ * SeleksiController
+ *
+ * ALUR PENETAPAN KELULUSAN (final):
+ *
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ 1. Admin buka /admin/seleksi                                         │
+ * │    → Daftar calon siswa berstatus 'seleksi', 'lulus', 'tidak_lulus' │
+ * │                                                                      │
+ * │ 2A. TETAPKAN INDIVIDUAL                                              │
+ * │    → Tombol "Lulus" per baris → modal pilih jurusan → submit        │
+ * │    → Tombol "Tolak" per baris → modal konfirmasi → submit           │
+ * │    → Status berubah: seleksi → lulus / tidak_lulus                  │
+ * │    → TIDAK ADA notifikasi ke calon siswa                            │
+ * │                                                                      │
+ * │ 2B. TETAPKAN MASSAL                                                  │
+ * │    → Centang checkbox (bisa multi) → Tolak Terpilih (bulk tolak)    │
+ * │    → Atau centang semua → Luluskan Terpilih (bulk lulus, jurusan    │
+ * │      di-default ke pilihan 1 masing-masing)                         │
+ * │    → TIDAK ADA notifikasi ke calon siswa                            │
+ * │                                                                      │
+ * │ 3. PUBLISH PENGUMUMAN                                                │
+ * │    → Tombol aktif HANYA setelah 0 peserta berstatus 'seleksi'       │
+ * │    → Admin klik → modal konfirmasi → submit                          │
+ * │    → is_published = 1 di tabel periode                              │
+ * │    → Notifikasi RESMI dikirim ke semua peserta lulus & tidak_lulus  │
+ * │      di periode aktif                                                │
+ * │    → action_url notif = /dashboard/pengumuman                       │
+ * │                                                                      │
+ * │ 4. Calon siswa buka /dashboard/notifikasi                           │
+ * │    → Notif muncul dengan icon khusus "pengumuman_kelulusan"         │
+ * │    → Klik notif → redirect ke /dashboard/pengumuman                 │
+ * │                                                                      │
+ * │ 5. /dashboard/pengumuman                                             │
+ * │    → Jika belum published: overlay "belum tersedia"                 │
+ * │    → Jika sudah published: tampil hasil milik dirinya sendiri       │
+ * │      (query diikat ke user_id + periode_id aktif)                   │
+ * └─────────────────────────────────────────────────────────────────────┘
+ *
+ * VALIDASI BACKEND (5 lapis) di tetapkan():
+ * [V1] ID harus di periode aktif
+ * [V2] Status harus 'seleksi' (lulus/tidak_lulus sudah ditetapkan, terkunci)
+ *      Pengecualian: admin bisa "ubah jurusan" untuk yang statusnya 'lulus'
+ *      via flag allow_edit_lulus — tapi itu flow terpisah (belum publish)
+ * [V3] ID tidak boleh ada di dua array sekaligus (lulus & tidak_lulus)
+ * [V4] jurusan_diterima harus salah satu dari pilihan1 atau pilihan2
+ * [V5] Kuota jurusan masih tersedia
+ *
+ * GUARD MODEL (defense-in-depth):
+ * - LOCKED_STATUSES = ['daftar_ulang', 'siswa_aktif'] → tidak pernah bisa diubah
+ * - EDITABLE_STATUSES = ['seleksi', 'lulus'] → 'lulus' tetap bisa diubah jurusannya
+ *   selama belum published dan belum daftar_ulang/siswa_aktif
+ */
 class SeleksiController extends BaseController
 {
     protected SeleksiModel      $seleksiModel;
@@ -27,18 +80,16 @@ class SeleksiController extends BaseController
     }
 
     // =========================================================
-    // INDEX — Daftar peserta seleksi (Penetapan Kelulusan)
+    // INDEX — Halaman penetapan kelulusan admin
     // =========================================================
     public function index()
     {
-        $peserta  = $this->seleksiModel->getForSeleksiByJurusan();
-        $jurusans = $this->jurusanModel->getAllActive();
+        $peserta      = $this->seleksiModel->getForSeleksiByJurusan();
+        $jurusans     = $this->jurusanModel->getAllActive();
+        $periodeAktif = $this->periodeModel->getPeriodeAktif();
 
-        // Hitung jumlah lulus per jurusan dari jurusan_diterima_id
-        // (bukan dari jurusan_pilihan1_id agar akurat)
         $lulusPerJurusan = $this->seleksiModel->getCountLulusPerJurusan();
 
-        // Kelompokkan peserta per jurusan_pilihan1_id untuk tampilan tabel
         $byJurusan = [];
         foreach ($jurusans as $j) {
             $byJurusan[$j->id] = [
@@ -48,7 +99,6 @@ class SeleksiController extends BaseController
                 'count_lulus' => $lulusPerJurusan[$j->id] ?? 0,
             ];
         }
-
         foreach ($peserta as $p) {
             $jid = $p->jurusan_pilihan1_id;
             if (isset($byJurusan[$jid])) {
@@ -56,38 +106,48 @@ class SeleksiController extends BaseController
             }
         }
 
+        // Counter untuk kondisi tombol publish
+        $totalSeleksiSelesai = 0;
+        $totalBelumDiproses  = 0;
+        foreach ($peserta as $p) {
+            if (in_array($p->status, ['lulus', 'tidak_lulus', 'daftar_ulang', 'siswa_aktif'])) {
+                $totalSeleksiSelesai++;
+            }
+            if ($p->status === 'seleksi') {
+                $totalBelumDiproses++;
+            }
+        }
+
+        $isPublished = $periodeAktif ? (bool) $periodeAktif->is_published : false;
+
         return $this->render('App\Modules\Seleksi\Views\index', [
-            'title'     => 'Penetapan Kelulusan',
-            'peserta'   => $peserta,
-            'jurusans'  => $jurusans,
-            'byJurusan' => $byJurusan,
+            'title'               => 'Penetapan Kelulusan',
+            'peserta'             => $peserta,
+            'jurusans'            => $jurusans,
+            'byJurusan'           => $byJurusan,
+            'periodeAktif'        => $periodeAktif,
+            'isPublished'         => $isPublished,
+            'totalSeleksiSelesai' => $totalSeleksiSelesai,
+            'totalBelumDiproses'  => $totalBelumDiproses,
         ]);
     }
 
     // =========================================================
-    // TETAPKAN LULUS / TIDAK LULUS (POST)
+    // TETAPKAN — individual atau massal (POST)
     //
-    // PERBAIKAN:
-    // - Setiap pendaftar yang dilulus kan WAJIB disertai jurusan_diterima
-    //   yang dikirim via hidden input: jurusan_diterima[{id}]
-    // - Jika jurusan_diterima tidak dipilih untuk siswa lulus,
-    //   default ke jurusan_pilihan1_id-nya
+    // Endpoint tunggal yang menangani:
+    // - Lulus individual (dari modal per baris)
+    // - Lulus massal    (dari bulk lulus — jurusan default ke pilihan1)
+    // - Tolak individual
+    // - Tolak massal
     //
-    // GUARD KEAMANAN (PENTING):
-    // - Siswa yang statusnya sudah 'daftar_ulang' atau 'siswa_aktif' TIDAK
-    //   BISA diubah lagi melalui endpoint ini, baik individu maupun bulk.
-    // - Validasi dilakukan di 2 lapis: di sini (controller, untuk pesan yang
-    //   jelas ke admin) dan di SeleksiModel::tetapkanLulus() (query-level
-    //   guard, defense-in-depth jika ada yang mencoba bypass UI).
-    // - Notifikasi HANYA dikirim untuk id yang benar-benar berhasil diupdate
-    //   (lulus_editable_ids / tidak_lulus_editable_ids dari hasil model),
-    //   bukan dari id mentah yang dikirim user, supaya siswa yang sudah
-    //   terkunci tidak menerima notifikasi yang menyesatkan.
+    // !! TIDAK MENGIRIM NOTIFIKASI APAPUN ke calon siswa !!
+    // Notifikasi hanya dikirim saat publish() dipanggil.
     // =========================================================
     public function tetapkan()
     {
-        $lulusIds        = $this->request->getPost('lulus_ids')       ?? [];
-        $tidakLulusIds   = $this->request->getPost('tidak_lulus_ids') ?? [];
+        $lulusIds        = $this->request->getPost('lulus_ids')        ?? [];
+        $tidakLulusIds   = $this->request->getPost('tidak_lulus_ids')  ?? [];
         $jurusanDiterima = $this->request->getPost('jurusan_diterima') ?? [];
 
         if (empty($lulusIds) && empty($tidakLulusIds)) {
@@ -97,125 +157,238 @@ class SeleksiController extends BaseController
         $lulusIdsInt      = array_map('intval', $lulusIds);
         $tidakLulusIdsInt = array_map('intval', $tidakLulusIds);
 
-        // Build jurusan_diterima map: [pendaftaran_id => jurusan_id]
-        $jurusanMap = [];
-        foreach ($jurusanDiterima as $pendId => $jurusanId) {
-            if ($jurusanId) {
-                $jurusanMap[(int) $pendId] = (int) $jurusanId;
-            }
+        // [V3] Duplikat ID di dua array
+        $duplikatIds = array_intersect($lulusIdsInt, $tidakLulusIdsInt);
+        if (! empty($duplikatIds)) {
+            return redirect()->back()->with(
+                'error',
+                count($duplikatIds) . ' peserta muncul di daftar Lulus sekaligus Tidak Lulus. Periksa kembali pilihan Anda.'
+            );
         }
 
-        // Untuk siswa lulus yang tidak ada jurusan_diterima di POST,
-        // fallback ke jurusan_pilihan1_id dari DB
-        foreach ($lulusIdsInt as $pendId) {
-            if (! isset($jurusanMap[$pendId])) {
-                $pend = $this->pendaftaranModel->find($pendId);
-                if ($pend && $pend->jurusan_pilihan1_id) {
-                    $jurusanMap[$pendId] = (int) $pend->jurusan_pilihan1_id;
+        // [V1] Ambil periode aktif
+        $periodeAktif = $this->periodeModel->getPeriodeAktif();
+        if (! $periodeAktif) {
+            return redirect()->back()->with('error', 'Tidak ada periode SPMB aktif. Penetapan tidak dapat dilakukan.');
+        }
+
+        // Jika sudah published, penetapan tidak boleh lagi
+        // (kecuali untuk perubahan jurusan yang sudah lulus — ditangani dengan flag khusus)
+        // Untuk bulk action biasa, block jika sudah published
+        if ((bool) $periodeAktif->is_published) {
+            return redirect()->back()->with(
+                'error',
+                'Pengumuman sudah dipublikasikan. Penetapan kelulusan tidak dapat diubah lagi.'
+            );
+        }
+
+        // [V1] [V2] [V4] Validasi per-pendaftar
+        $jurusanMap       = [];
+        $errorMessages    = [];
+        $allIdsToValidate = array_unique(array_merge($lulusIdsInt, $tidakLulusIdsInt));
+
+        foreach ($allIdsToValidate as $pendId) {
+            $pend = $this->pendaftaranModel->find($pendId);
+
+            if (! $pend) {
+                $errorMessages[] = "ID #{$pendId}: pendaftaran tidak ditemukan.";
+                continue;
+            }
+
+            // [V1] Harus di periode aktif
+            if ((int) $pend->periode_id !== (int) $periodeAktif->id) {
+                $errorMessages[] = "No. {$pend->no_pendaftaran}: bukan bagian dari periode aktif.";
+                continue;
+            }
+
+            // [V2] Status harus 'seleksi' atau 'lulus'
+            // - 'seleksi' → belum diproses, bisa ditetapkan lulus/tidak_lulus
+            // - 'lulus'   → sudah ditetapkan, HANYA bisa diubah jurusannya (tidak bisa di-tolak ulang kecuali via flow koreksi)
+            // - 'daftar_ulang', 'siswa_aktif' → terkunci, tidak bisa diubah sama sekali
+            if (in_array($pend->status, ['daftar_ulang', 'siswa_aktif'])) {
+                $label = $pend->status === 'daftar_ulang' ? 'sudah Daftar Ulang (terkunci)' : 'sudah Siswa Aktif (terkunci)';
+                $errorMessages[] = "No. {$pend->no_pendaftaran}: {$label}.";
+                continue;
+            }
+
+            // 'tidak_lulus' yang ingin di-set ke lulus → diizinkan (koreksi)
+            // 'seleksi' → normal
+            // 'lulus' yang ingin di-set ke tidak_lulus → diizinkan (koreksi, jarang tapi valid)
+            // Semua case di atas lolos di sini, guard di Model yang mencegah terkunci
+
+            // [V4] Validasi jurusan untuk yang ditetapkan lulus
+            if (in_array($pendId, $lulusIdsInt, true)) {
+                $jurusanIdPost = isset($jurusanDiterima[$pendId]) && $jurusanDiterima[$pendId]
+                    ? (int) $jurusanDiterima[$pendId]
+                    : null;
+
+                $pilihan1     = (int) $pend->jurusan_pilihan1_id;
+                $pilihan2     = $pend->jurusan_pilihan2_id ? (int) $pend->jurusan_pilihan2_id : null;
+                $pilihanValid = array_values(array_filter([$pilihan1, $pilihan2]));
+
+                if ($jurusanIdPost !== null) {
+                    if (! in_array($jurusanIdPost, $pilihanValid, true)) {
+                        $errorMessages[] = "No. {$pend->no_pendaftaran}: jurusan yang dipilihkan bukan pilihan 1 atau 2 pendaftar.";
+                        continue;
+                    }
+                    $jurusanMap[$pendId] = $jurusanIdPost;
+                } else {
+                    // Fallback ke pilihan 1 (untuk bulk lulus tanpa pilih jurusan eksplisit)
+                    if (! $pilihan1) {
+                        $errorMessages[] = "No. {$pend->no_pendaftaran}: tidak memiliki data pilihan jurusan.";
+                        continue;
+                    }
+                    $jurusanMap[$pendId] = $pilihan1;
                 }
             }
         }
 
+        if (! empty($errorMessages)) {
+            return redirect()->back()->with(
+                'error',
+                'Penetapan dibatalkan — ada data tidak valid: ' . implode(' | ', $errorMessages)
+            );
+        }
+
+        // [V5] Kuota per jurusan
+        $kebutuhanKuota = [];
+        foreach ($lulusIdsInt as $pendId) {
+            $jid = $jurusanMap[$pendId] ?? null;
+            if ($jid) {
+                $kebutuhanKuota[$jid] = ($kebutuhanKuota[$jid] ?? 0) + 1;
+            }
+        }
+
+        // Kurangi dari yang sudah lulus sebelumnya di batch ini
+        // (pendaftar yang statusnya 'lulus' & akan diubah jurusan — slot lama dibebaskan)
+        $errorKuota = [];
+        foreach ($kebutuhanKuota as $jid => $jumlahBaru) {
+            $jurusan   = $this->jurusanModel->find($jid);
+            $sisaKuota = $this->jurusanModel->getSisaKuota($jid, (int) $jurusan->kuota);
+
+            if ($jumlahBaru > $sisaKuota) {
+                $errorKuota[] = "Jurusan {$jurusan->nama}: butuh {$jumlahBaru} slot, sisa {$sisaKuota} kuota.";
+            }
+        }
+
+        if (! empty($errorKuota)) {
+            return redirect()->back()->with(
+                'error',
+                'Kuota tidak mencukupi: ' . implode(' | ', $errorKuota)
+            );
+        }
+
+        // Simpan ke DB — Model akan terapkan guard LOCKED_STATUSES
         $result = $this->seleksiModel->tetapkanLulus($lulusIdsInt, $tidakLulusIdsInt, $jurusanMap);
 
         if (! $result['success']) {
             return redirect()->back()->with('error', 'Gagal menyimpan hasil seleksi. Coba lagi.');
         }
 
-        // Notifikasi ke calon siswa yang BENAR-BENAR berhasil di-set LULUS
-        // (pakai lulus_editable_ids dari model, bukan $lulusIdsInt mentah,
-        // supaya siswa yang sudah terkunci tidak ikut dapat notifikasi)
-        foreach ($result['lulus_editable_ids'] as $pendId) {
-            $pend = $this->pendaftaranModel->find($pendId);
-            if ($pend) {
-                $jurusanNama = '';
-                if (isset($jurusanMap[$pendId])) {
-                    $jur = $this->jurusanModel->find($jurusanMap[$pendId]);
-                    $jurusanNama = $jur ? " di jurusan {$jur->nama}" : '';
-                }
+        // !! TIDAK ADA NOTIFIKASI DI SINI !!
+        // Notif resmi hanya dikirim saat admin klik Publish Pengumuman.
 
-                $this->notifService->send(
-                    $pend->user_id,
-                    'hasil_seleksi_lulus',
-                    'Selamat! Anda Dinyatakan Lulus Seleksi',
-                    "Panitia PPDB SMK Al-Munawwir telah menetapkan bahwa Anda LULUS seleksi{$jurusanNama}. Silakan pantau pengumuman resmi untuk informasi daftar ulang.",
-                    ['url' => base_url('dashboard/status')]
-                );
-            }
-        }
-
-        // Notifikasi ke calon siswa yang BENAR-BENAR berhasil di-set TIDAK LULUS
-        foreach ($result['tidak_lulus_editable_ids'] as $pendId) {
-            $pend = $this->pendaftaranModel->find($pendId);
-            if ($pend) {
-                $this->notifService->send(
-                    $pend->user_id,
-                    'hasil_seleksi_tidak_lulus',
-                    'Hasil Seleksi PPDB SMK Al-Munawwir',
-                    'Mohon maaf, berdasarkan hasil seleksi yang telah dilakukan oleh panitia PPDB SMK Al-Munawwir, Anda belum dapat diterima pada periode ini. Terima kasih telah mendaftar.',
-                    ['url' => base_url('dashboard/status')]
-                );
-            }
-        }
-
-        // ── Susun pesan akhir, sertakan info jika ada yang ditolak karena terkunci ──
+        // Susun pesan flash
         $msgParts = [];
-        if ($result['lulus_updated'])      $msgParts[] = "{$result['lulus_updated']} peserta dinyatakan lulus";
-        if ($result['tidak_lulus_updated']) $msgParts[] = "{$result['tidak_lulus_updated']} peserta tidak lulus";
+        if ($result['lulus_updated'])       $msgParts[] = "{$result['lulus_updated']} peserta ditetapkan lulus";
+        if ($result['tidak_lulus_updated']) $msgParts[] = "{$result['tidak_lulus_updated']} peserta ditetapkan tidak lulus";
 
         $totalLocked = $result['lulus_locked'] + $result['tidak_lulus_locked'];
 
         if (empty($msgParts) && $totalLocked > 0) {
-            // Semua yang dipilih ternyata sudah terkunci — tidak ada yang berubah sama sekali
             return redirect()->to(base_url('admin/seleksi'))
-                ->with('error', "{$totalLocked} peserta yang dipilih sudah berstatus Daftar Ulang/Siswa Aktif dan tidak bisa diubah lagi statusnya.");
+                ->with('error', "{$totalLocked} peserta yang dipilih sudah terkunci (Daftar Ulang/Siswa Aktif) dan tidak bisa diubah.");
         }
 
-        $successMsg = implode(', ', $msgParts) . '. Hasil seleksi berhasil disimpan.';
+        $successMsg = implode(', ', $msgParts) . '. Hasil disimpan. '
+            . 'Klik <strong>Publish Pengumuman</strong> jika seluruh peserta sudah selesai diproses.';
 
         if ($totalLocked > 0) {
-            $successMsg .= " ({$totalLocked} peserta dilewati karena sudah berstatus Daftar Ulang/Siswa Aktif dan terkunci.)";
+            $successMsg .= " ({$totalLocked} peserta dilewati karena terkunci.)";
         }
 
         return redirect()->to(base_url('admin/seleksi'))->with('success', $successMsg);
     }
 
     // =========================================================
-    // PUBLISH Pengumuman Resmi (Admin TU)
+    // PUBLISH — Publikasikan pengumuman resmi (POST)
+    //
+    // Validasi backend:
+    // 1. periode_id di POST = periode aktif
+    // 2. Pengumuman belum pernah dipublish
+    // 3. Tidak ada peserta 'seleksi' yang belum diproses
+    //
+    // Jika semua lolos:
+    // - is_published = 1 di tabel periode
+    // - Notifikasi RESMI dikirim ke SEMUA peserta lulus & tidak_lulus
+    //   di periode aktif, dengan action_url = /dashboard/pengumuman
     // =========================================================
     public function publish()
     {
-        $periodeId = $this->request->getPost('periode_id');
-        $periode   = $this->periodeModel->find($periodeId);
+        $periodeId    = (int) $this->request->getPost('periode_id');
+        $periodeAktif = $this->periodeModel->getPeriodeAktif();
 
-        if (! $periode) {
-            return redirect()->back()->with('error', 'Periode tidak ditemukan.');
+        if (! $periodeAktif) {
+            return redirect()->back()->with('error', 'Tidak ada periode SPMB yang aktif saat ini.');
         }
 
-        $this->periodeModel->publish($periodeId);
+        if ($periodeId !== (int) $periodeAktif->id) {
+            return redirect()->back()->with('error', 'Pengumuman hanya bisa dipublikasikan untuk periode yang sedang aktif.');
+        }
 
-        // Notif massal ke semua calon siswa yang sudah diseleksi
+        if ((bool) $periodeAktif->is_published) {
+            return redirect()->back()->with('error', 'Pengumuman periode ini sudah pernah dipublikasikan sebelumnya.');
+        }
+
+        // Pastikan 0 peserta berstatus 'seleksi'
+        $db              = db_connect();
+        $sisaBelumProses = (int) $db->table('pendaftaran')
+            ->where('periode_id', $periodeAktif->id)
+            ->where('status', 'seleksi')
+            ->where('deleted_at IS NULL')
+            ->countAllResults();
+
+        if ($sisaBelumProses > 0) {
+            return redirect()->back()->with(
+                'error',
+                "Pengumuman belum bisa dipublikasikan. Masih ada {$sisaBelumProses} peserta dengan status 'Menunggu Seleksi' yang belum ditetapkan. "
+                    . "Selesaikan penetapan kelulusan semua peserta terlebih dahulu."
+            );
+        }
+
+        // Publish
+        $this->periodeModel->publish($periodeAktif->id);
+
+        // Kirim notifikasi RESMI ke semua peserta di periode ini
         $pendaftarans = $this->pendaftaranModel
             ->whereIn('status', ['lulus', 'tidak_lulus'])
+            ->where('periode_id', $periodeAktif->id)
             ->findAll();
+
+        $urlPengumuman = base_url('dashboard/pengumuman');
 
         foreach ($pendaftarans as $p) {
             if ($p->status === 'lulus') {
-                $msg = '🎉 Selamat! Anda resmi DITERIMA di SMK Al-Munawwir. Segera lakukan daftar ulang sesuai jadwal yang telah ditentukan oleh pihak sekolah.';
+                $title = '🎉 Pengumuman Resmi PPDB — Anda Diterima!';
+                $msg   = 'Selamat! Pengumuman resmi PPDB SMK Al-Munawwir telah diterbitkan. '
+                    . 'Anda dinyatakan DITERIMA. Klik untuk melihat detail dan informasi daftar ulang.';
             } else {
-                $msg = 'Pengumuman resmi PPDB SMK Al-Munawwir telah diterbitkan. Mohon maaf, Anda belum dapat diterima pada periode ini. Terima kasih atas kepercayaan Anda kepada SMK Al-Munawwir.';
+                $title = 'Pengumuman Resmi PPDB SMK Al-Munawwir';
+                $msg   = 'Pengumuman resmi PPDB telah diterbitkan. Mohon maaf, Anda belum dapat diterima '
+                    . 'pada periode ini. Klik untuk melihat informasi selengkapnya.';
             }
 
             $this->notifService->send(
                 $p->user_id,
                 'pengumuman_kelulusan',
-                'Pengumuman Resmi PPDB SMK Al-Munawwir',
+                $title,
                 $msg,
-                ['url' => base_url('dashboard/pengumuman')]
+                ['url' => $urlPengumuman]
             );
         }
 
+        $jumlah = count($pendaftarans);
         return redirect()->to(base_url('admin/seleksi'))
-            ->with('success', 'Pengumuman resmi PPDB berhasil dipublikasikan oleh panitia!');
+            ->with('success', "Pengumuman resmi berhasil dipublikasikan! {$jumlah} notifikasi telah dikirim ke calon siswa.");
     }
 }

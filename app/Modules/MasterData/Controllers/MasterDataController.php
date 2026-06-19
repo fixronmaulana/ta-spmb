@@ -162,13 +162,13 @@ class MasterDataController extends BaseController
             ->with('active_tab', 'periode');
     }
 
-    public function publishPeriode(int $id)
-    {
-        $this->periodeModel->publish($id);
-        return redirect()->to(base_url('admin/master-data'))
-            ->with('success', 'Pengumuman periode berhasil dipublikasikan.')
-            ->with('active_tab', 'periode');
-    }
+    // public function publishPeriode(int $id)
+    // {
+    //     $this->periodeModel->publish($id);
+    //     return redirect()->to(base_url('admin/master-data'))
+    //         ->with('success', 'Pengumuman periode berhasil dipublikasikan.')
+    //         ->with('active_tab', 'periode');
+    // }
 
     public function hapusPeriode(int $id)
     {

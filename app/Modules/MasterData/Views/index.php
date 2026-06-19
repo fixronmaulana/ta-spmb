@@ -449,12 +449,12 @@ $activeTab = session()->getFlashdata('active_tab') ?? 'jurusan';
                                             </form>
                                         <?php endif; ?>
                                         <?php if ($p->is_active && !$p->is_published): ?>
-                                            <form action="<?= base_url('admin/master-data/periode/' . $p->id . '/publish') ?>" method="POST" class="inline"
-                                                onsubmit="return confirm('Publish pengumuman?')">
-                                                <?= csrf_field() ?>
-                                                <button type="submit" class="px-2 py-1 rounded-lg text-xs font-medium text-green-600 hover:bg-green-50 transition-colors">Publish</button>
-                                            </form>
-                                        <?php endif; ?>
+    <a href="<?= base_url('admin/seleksi') ?>"
+        class="px-2 py-1 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+        title="Publish pengumuman kelulusan hanya bisa dilakukan dari halaman Penetapan Kelulusan, setelah semua peserta selesai diproses.">
+        Kelola Kelulusan →
+    </a>
+<?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

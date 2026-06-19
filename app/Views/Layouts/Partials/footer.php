@@ -5,7 +5,7 @@
                 &copy; <?= date('Y') ?> <strong class="text-gray-600">SMK Al-Munawwir IIBS</strong> — Sistem SPMB Online
             </p>
             <p class="text-xs text-gray-400">
-                Built by FikTech
+                Built by Fikron support by TRPL Poliwangi
             </p>
         </div>
     </div>

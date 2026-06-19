@@ -15,13 +15,13 @@ class PeriodeSeeder extends Seeder
 
         $periodes = [
             [
-                'nama'                         => 'SPMB 2025/2026',
+                'nama'                         => 'SPMB 2025/2026 - Gelombang 1',
                 'tahun_ajaran'                 => '2025/2026',
-                'tanggal_mulai'                => '2025-01-15',
-                'tanggal_selesai'              => '2025-06-30',
-                'tanggal_pengumuman'           => '2025-07-10',
-                'tanggal_daftar_ulang_mulai'   => '2025-07-11',
-                'tanggal_daftar_ulang_selesai' => '2025-07-20',
+                'tanggal_mulai'                => '2026-01-1',
+                'tanggal_selesai'              => '2026-03-31',
+                'tanggal_pengumuman'           => '2026-07-10',
+                'tanggal_daftar_ulang_mulai'   => '2026-07-11',
+                'tanggal_daftar_ulang_selesai' => '2026-07-20',
                 'is_active'                    => 1,
                 'is_published'                 => 0,
                 'deskripsi'                    => 'Sistem Penerimaan Murid Baru Tahun Ajaran 2025/2026',

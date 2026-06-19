@@ -419,7 +419,8 @@
 
             <!-- Bottom Bar -->
             <div class="mt-10 pt-6 border-t text-center" style="border-color: rgba(255,255,255,0.1);">
-                <p class="text-sm opacity-60">&copy; <?= date('Y') ?> SMK Al-Munawwir IIBS. All rights reserved.</p>
+                <p class="text-sm opacity-60">&copy; <?= date('Y') ?> SMK Al-Munawwir IIBS. All rights reserved | Built by Fikron support by TRPL Poliwangi
+</p>
             </div>
         </div>
     </footer>

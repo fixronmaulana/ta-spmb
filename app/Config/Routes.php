@@ -127,7 +127,6 @@ $routes->group('admin', ['filter' => 'auth:admin_tu'], function ($routes) {
     // Periode
     $routes->post('master-data/periode/simpan',                   'App\Modules\MasterData\Controllers\MasterDataController::simpanPeriode');
     $routes->post('master-data/periode/(:num)/aktif',             'App\Modules\MasterData\Controllers\MasterDataController::setAktifPeriode/$1');
-    $routes->post('master-data/periode/(:num)/publish',           'App\Modules\MasterData\Controllers\MasterDataController::publishPeriode/$1');
 
     // Dokumen
     $routes->post('master-data/dokumen/simpan',                   'App\Modules\MasterData\Controllers\MasterDataController::simpanJenisDokumen');
