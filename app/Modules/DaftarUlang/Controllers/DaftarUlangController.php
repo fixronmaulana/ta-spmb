@@ -13,13 +13,18 @@ class DaftarUlangController extends BaseController
 {
     protected DaftarUlangModel $model;
     protected PendaftaranModel $pendaftaranModel;
+    protected KelasModel       $kelasModel;
 
     public function __construct()
     {
         $this->model            = new DaftarUlangModel();
         $this->pendaftaranModel = new PendaftaranModel();
+        $this->kelasModel       = new KelasModel();
     }
 
+    // =========================================================
+    // FORM
+    // =========================================================
     public function form()
     {
         $userId      = $this->userId();
@@ -30,28 +35,35 @@ class DaftarUlangController extends BaseController
                 ->with('error', 'Anda tidak memenuhi syarat untuk daftar ulang saat ini.');
         }
 
-        $existing = $this->model->getByPendaftaranId($pendaftaran->id);
-        if ($existing && $existing->status === DaftarUlangModel::STATUS_DIKONFIRMASI) {
+        // FIX #3: Cek apakah sudah ada yang DIKONFIRMASI — jika ya, tidak perlu form lagi
+        $dikonfirmasi = $this->model->getDikonfirmasiByPendaftaranId($pendaftaran->id);
+        if ($dikonfirmasi) {
             return redirect()->to(base_url('dashboard/daftar-ulang/status'))
                 ->with('info', 'Daftar ulang Anda sudah dikonfirmasi oleh admin.');
         }
 
+        // FIX #3: Cek apakah ada PENDING — jika ya, tampilkan info tapi form ditutup
+        $pending = $this->model->getPendingByPendaftaranId($pendaftaran->id);
+
         $pendaftaran = $this->pendaftaranModel->getWithRelations($pendaftaran->id);
-        $kelasModel  = new KelasModel();
-        $kelasList   = $kelasModel->getKelasAktif((int) $pendaftaran->jurusan_diterima_id);
+
+        // FIX #1: Kelas yang ditampilkan HANYA dari jurusan_diterima_id
+        $kelasList = $this->kelasModel->getKelasAktif((int) $pendaftaran->jurusan_diterima_id);
 
         return $this->render('App\Modules\DaftarUlang\Views\form', [
             'title'       => 'Daftar Ulang',
             'pendaftaran' => $pendaftaran,
-            'existing'    => $existing,
+            'pending'     => $pending,    // FIX #3: info pengajuan yg sedang diproses
             'kelasList'   => $kelasList,
         ]);
     }
 
+    // =========================================================
+    // SUBMIT
+    // =========================================================
     /**
-     * Handle submit bukti pembayaran.
-     * Mendukung AJAX fetch (returns JSON) dan form POST biasa (returns redirect).
-     * Menggunakan AJAX agar spinner tidak stuck jika terjadi error server.
+     * FIX #3: Selalu INSERT row baru — tidak pernah UPDATE existing.
+     * FIX #1: Validasi kelas_id harus berasal dari jurusan_diterima_id.
      */
     public function submit()
     {
@@ -61,111 +73,86 @@ class DaftarUlangController extends BaseController
         $pendaftaran = $this->pendaftaranModel->getByUserId($userId);
 
         if (! $pendaftaran || ! in_array($pendaftaran->status, ['lulus', 'daftar_ulang'])) {
-            if ($isAjax) {
-                return $this->response->setStatusCode(403)->setJSON([
-                    'success' => false,
-                    'message' => 'Tidak dapat melakukan daftar ulang.',
-                ]);
-            }
-            return redirect()->back()->with('error', 'Tidak dapat melakukan daftar ulang.');
+            return $this->failResponse($isAjax, 403, 'Tidak dapat melakukan daftar ulang.');
         }
 
-        $existing = $this->model->getByPendaftaranId($pendaftaran->id);
+        // FIX #3: Sudah dikonfirmasi → tolak submit
+        $dikonfirmasi = $this->model->getDikonfirmasiByPendaftaranId($pendaftaran->id);
+        if ($dikonfirmasi) {
+            return $this->failResponse(
+                $isAjax,
+                422,
+                'Daftar ulang Anda sudah dikonfirmasi, tidak bisa diajukan lagi.',
+                base_url('dashboard/daftar-ulang/status')
+            );
+        }
 
-        if ($existing && $existing->status === DaftarUlangModel::STATUS_DIKONFIRMASI) {
-            if ($isAjax) {
-                return $this->response->setStatusCode(422)->setJSON([
-                    'success' => false,
-                    'message' => 'Daftar ulang Anda sudah dikonfirmasi, tidak bisa diubah lagi.',
-                    'redirect' => base_url('dashboard/daftar-ulang/status'),
-                ]);
-            }
-            return redirect()->to(base_url('dashboard/daftar-ulang/status'))
-                ->with('info', 'Daftar ulang Anda sudah dikonfirmasi, tidak bisa diubah lagi.');
+        // FIX #3: Ada PENDING → tolak submit (cegah double submit)
+        $pending = $this->model->getPendingByPendaftaranId($pendaftaran->id);
+        if ($pending) {
+            return $this->failResponse(
+                $isAjax,
+                422,
+                'Anda sudah memiliki pengajuan daftar ulang yang sedang menunggu konfirmasi admin. Harap tunggu hasilnya.',
+                base_url('dashboard/daftar-ulang/status')
+            );
         }
 
         // ── Validasi nominal ──────────────────────────────────────────────
-        // Nilai dari form: format ribuan Indonesia mis. "2.500.000"
-        // Strip semua non-digit sebelum validasi agar tidak gagal karena titik.
         $nominalBersih = preg_replace('/[^0-9]/', '', $this->request->getPost('nominal_pembayaran') ?? '0');
-
         if (empty($nominalBersih) || (int) $nominalBersih <= 0) {
-            if ($isAjax) {
-                return $this->response->setStatusCode(422)->setJSON([
-                    'success' => false,
-                    'message' => 'Nominal pembayaran wajib diisi dan harus lebih dari 0.',
-                ]);
-            }
-            return redirect()->back()->withInput()
-                ->with('error', 'Nominal pembayaran wajib diisi dan harus lebih dari 0.');
+            return $this->failResponse($isAjax, 422, 'Nominal pembayaran wajib diisi dan harus lebih dari 0.');
         }
 
-        // ── Validasi file ─────────────────────────────────────────────────
-        $sudahUpload = $existing && $existing->bukti_pembayaran_path;
-        $buktiFiler  = $sudahUpload
-            ? 'permit_empty|max_size[bukti_pembayaran,2048]'
-            : 'uploaded[bukti_pembayaran]|max_size[bukti_pembayaran,2048]';
+        // ── FIX #1: Validasi kelas_id harus dari jurusan_diterima_id ─────
+        $kelasId     = $this->request->getPost('kelas_id') ?: null;
+        $pendaftaran = $this->pendaftaranModel->getWithRelations($pendaftaran->id);
 
-        if (! $this->validate(['bukti_pembayaran' => $buktiFiler])) {
-            $errMsg = implode(' ', $this->validator->getErrors());
-            if ($isAjax) {
-                return $this->response->setStatusCode(422)->setJSON([
-                    'success' => false,
-                    'message' => $errMsg ?: 'File bukti pembayaran tidak valid.',
-                ]);
+        if ($kelasId !== null) {
+            $kelas = $this->kelasModel->find($kelasId);
+            if (! $kelas) {
+                return $this->failResponse($isAjax, 422, 'Kelas yang dipilih tidak valid.');
             }
-            return redirect()->back()->withInput()->with('error', $errMsg);
+            if ((int) $kelas->jurusan_id !== (int) $pendaftaran->jurusan_diterima_id) {
+                return $this->failResponse(
+                    $isAjax,
+                    422,
+                    'Kelas yang dipilih tidak sesuai dengan jurusan yang Anda terima (' .
+                        ($pendaftaran->jurusan_diterima_nama ?? 'jurusan diterima') . ').'
+                );
+            }
+        }
+
+        // ── Validasi file — wajib diupload setiap submit baru ────────────
+        if (! $this->validate(['bukti_pembayaran' => 'uploaded[bukti_pembayaran]|max_size[bukti_pembayaran,2048]'])) {
+            $errMsg = implode(' ', $this->validator->getErrors());
+            return $this->failResponse($isAjax, 422, $errMsg ?: 'File bukti pembayaran tidak valid.');
         }
 
         // ── Upload file ───────────────────────────────────────────────────
         $file     = $this->request->getFile('bukti_pembayaran');
         $uploader = new FileUploader();
 
-        $buktiPath     = $existing->bukti_pembayaran_path ?? null;
-        $namaFileBukti = $existing->nama_file_bukti ?? null;
-
-        if ($file && $file->isValid() && ! $file->hasMoved()) {
-            $upload = $uploader->upload($file, 'bukti');
-            if (! $upload['success']) {
-                if ($isAjax) {
-                    return $this->response->setStatusCode(422)->setJSON([
-                        'success' => false,
-                        'message' => $upload['message'],
-                    ]);
-                }
-                return redirect()->back()->withInput()->with('error', $upload['message']);
-            }
-            $buktiPath     = $upload['path'];
-            $namaFileBukti = $upload['original_name'];
+        if (! $file || ! $file->isValid() || $file->hasMoved()) {
+            return $this->failResponse($isAjax, 422, 'Bukti pembayaran wajib diupload.');
         }
 
-        if (! $buktiPath) {
-            if ($isAjax) {
-                return $this->response->setStatusCode(422)->setJSON([
-                    'success' => false,
-                    'message' => 'Bukti pembayaran wajib diupload.',
-                ]);
-            }
-            return redirect()->back()->withInput()->with('error', 'Bukti pembayaran wajib diupload.');
+        $upload = $uploader->upload($file, 'bukti');
+        if (! $upload['success']) {
+            return $this->failResponse($isAjax, 422, $upload['message']);
         }
 
-        // ── Simpan ke DB ──────────────────────────────────────────────────
-        $data = [
+        // ── FIX #3: Selalu INSERT row baru ───────────────────────────────
+        $this->model->insert([
             'pendaftaran_id'        => $pendaftaran->id,
             'user_id'               => $userId,
-            'kelas_id'              => $this->request->getPost('kelas_id') ?: null,
-            'bukti_pembayaran_path' => $buktiPath,
-            'nama_file_bukti'       => $namaFileBukti,
+            'kelas_id'              => $kelasId,
+            'bukti_pembayaran_path' => $upload['path'],
+            'nama_file_bukti'       => $upload['original_name'],
             'nominal_pembayaran'    => (int) $nominalBersih,
             'catatan_siswa'         => $this->request->getPost('catatan_siswa') ?? '',
             'status'                => DaftarUlangModel::STATUS_PENDING,
-        ];
-
-        if ($existing) {
-            $this->model->update($existing->id, $data);
-        } else {
-            $this->model->insert($data);
-        }
+        ]);
 
         // Update status pendaftaran ke 'daftar_ulang' hanya jika masih 'lulus'
         if ($pendaftaran->status === 'lulus') {
@@ -185,7 +172,6 @@ class DaftarUlangController extends BaseController
             log_message('warning', 'DaftarUlangController::submit - notif admin gagal: ' . $e->getMessage());
         }
 
-        // ── Response ──────────────────────────────────────────────────────
         $redirectUrl = base_url('dashboard/daftar-ulang/status');
 
         if ($isAjax) {
@@ -200,24 +186,33 @@ class DaftarUlangController extends BaseController
             ->with('success', 'Bukti pembayaran berhasil diupload! Menunggu verifikasi admin.');
     }
 
+    // =========================================================
+    // STATUS — tampilkan pengajuan terbaru + riwayat semua
+    // =========================================================
     public function status()
     {
         $userId      = $this->userId();
         $pendaftaran = $this->pendaftaranModel->getByUserId($userId);
-        $daftarUlang = $pendaftaran ? $this->model->getByPendaftaranId($pendaftaran->id) : null;
+
+        // FIX #3: tampilkan pengajuan terbaru dan semua riwayat
+        $daftarUlang = null;
+        $riwayat     = [];
+        if ($pendaftaran) {
+            $daftarUlang = $this->model->getByPendaftaranId($pendaftaran->id); // terbaru
+            $riwayat     = $this->model->getHistoryByPendaftaranId($pendaftaran->id);
+        }
 
         return $this->render('App\Modules\DaftarUlang\Views\status', [
             'title'       => 'Status Daftar Ulang',
             'daftarUlang' => $daftarUlang,
+            'riwayat'     => $riwayat,
             'pendaftaran' => $pendaftaran,
         ]);
     }
 
-    /**
-     * Stream bukti pembayaran milik siswa yang sedang login.
-     * Siswa hanya bisa melihat file miliknya sendiri — kepemilikan dicek
-     * via pendaftaran_id yang terhubung ke userId() dari sesi aktif.
-     */
+    // =========================================================
+    // STREAM BUKTI
+    // =========================================================
     public function streamBukti(int $id)
     {
         $userId      = $this->userId();
@@ -229,7 +224,6 @@ class DaftarUlangController extends BaseController
 
         $daftarUlang = $this->model->find($id);
 
-        // Pastikan record ada DAN milik pendaftaran user ini (cegah akses silang antar siswa)
         if (! $daftarUlang || (int) $daftarUlang->pendaftaran_id !== (int) $pendaftaran->id) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
@@ -246,5 +240,25 @@ class DaftarUlangController extends BaseController
         } catch (\RuntimeException $e) {
             return redirect()->back()->with('error', 'File tidak dapat dibuka.');
         }
+    }
+
+    // =========================================================
+    // HELPER
+    // =========================================================
+    private function failResponse(bool $isAjax, int $code, string $message, string $redirect = ''): \CodeIgniter\HTTP\ResponseInterface|false
+    {
+        if ($isAjax) {
+            $payload = ['success' => false, 'message' => $message];
+            if ($redirect) {
+                $payload['redirect'] = $redirect;
+            }
+            return $this->response->setStatusCode($code)->setJSON($payload);
+        }
+
+        if ($redirect) {
+            return redirect()->to($redirect)->with('error', $message);
+        }
+
+        return redirect()->back()->withInput()->with('error', $message);
     }
 }

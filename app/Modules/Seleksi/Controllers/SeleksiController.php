@@ -336,28 +336,14 @@ class SeleksiController extends BaseController
             return redirect()->back()->with('error', 'Pengumuman hanya bisa dipublikasikan untuk periode yang sedang aktif.');
         }
 
-        if ((bool) $periodeAktif->is_published) {
-            return redirect()->back()->with('error', 'Pengumuman periode ini sudah pernah dipublikasikan sebelumnya.');
+        // Validasi inti (sudah tidak ada peserta tersisa berstatus 'seleksi',
+        // belum pernah dipublish) dijalankan di dalam PeriodeModel::publish(),
+        // sehingga guard yang sama berlaku di mana pun method ini dipanggil.
+        try {
+            $this->periodeModel->publish($periodeAktif->id);
+        } catch (\RuntimeException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
-
-        // Pastikan 0 peserta berstatus 'seleksi'
-        $db              = db_connect();
-        $sisaBelumProses = (int) $db->table('pendaftaran')
-            ->where('periode_id', $periodeAktif->id)
-            ->where('status', 'seleksi')
-            ->where('deleted_at IS NULL')
-            ->countAllResults();
-
-        if ($sisaBelumProses > 0) {
-            return redirect()->back()->with(
-                'error',
-                "Pengumuman belum bisa dipublikasikan. Masih ada {$sisaBelumProses} peserta dengan status 'Menunggu Seleksi' yang belum ditetapkan. "
-                    . "Selesaikan penetapan kelulusan semua peserta terlebih dahulu."
-            );
-        }
-
-        // Publish
-        $this->periodeModel->publish($periodeAktif->id);
 
         // Kirim notifikasi RESMI ke semua peserta di periode ini
         $pendaftarans = $this->pendaftaranModel

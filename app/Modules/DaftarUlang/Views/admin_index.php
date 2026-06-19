@@ -636,13 +636,12 @@ $badgeCfg = [
                     <!-- Hidden field nama_kelas untuk dikirim ke controller -->
                     <input type="hidden" name="nama_kelas" :value="approveKelasNama">
 
-                    <!-- Info jurusan pilihan calon siswa -->
+                    <!-- FIX #2: Info jurusan DITERIMA (bukan pilihan1/2) -->
                     <p class="text-xs" style="color:hsl(220,15%,55%);">
-                        Kelas ditampilkan berdasarkan jurusan pilihan 1
-                        (<span class="font-semibold" x-text="selected?.jurusan_pilihan1_kode ?? '-'"></span>)
-                        dan pilihan 2
-                        (<span class="font-semibold" x-text="selected?.jurusan_pilihan2_kode ?? '-'"></span>)
-                        calon siswa.
+                        Kelas ditampilkan berdasarkan <strong>jurusan yang diterima</strong>:
+                        <span class="font-semibold" style="color:hsl(220,54%,20%);"
+                            x-text="(selected?.jurusan_kode ? '[' + selected.jurusan_kode + '] ' : '') + (selected?.jurusan_nama ?? '-')">
+                        </span>
                     </p>
 
                     <!-- Warning jika tidak ada kelas tersedia -->
@@ -821,31 +820,27 @@ $badgeCfg = [
             },
 
             /**
-             * Bangun daftar opsi kelas dari jurusan pilihan 1 dan pilihan 2 calon siswa.
-             * Hanya mengambil kelas yang berelasi dengan kedua jurusan tersebut.
+             * FIX #2: Bangun daftar opsi kelas HANYA dari jurusan_diterima_id.
+             * Sebelumnya salah menggunakan pilihan1 + pilihan2. Admin hanya boleh
+             * menetapkan kelas dari jurusan yang sudah ditetapkan sebagai jurusan diterima.
              */
             buildKelasOptions(item) {
                 const options = [];
-                const seen = new Set();
 
-                const addKelas = (jurusanId, jurusanKode, jurusanNama) => {
-                    if (!jurusanId) return;
-                    const kelas = kelasByJurusan[jurusanId] ?? [];
-                    kelas.forEach(k => {
-                        if (seen.has(k.id)) return;
-                        seen.add(k.id);
-                        const prefix = jurusanKode ? `[${jurusanKode}] ` : '';
-                        options.push({
-                            id: k.id,
-                            label: `${prefix}${k.nama}`
-                        });
+                // Gunakan jurusan_diterima_id — bukan pilihan1 / pilihan2
+                const jurusanId = item.jurusan_diterima_id;
+                const jurusanKode = item.jurusan_kode;
+
+                if (!jurusanId) return options;
+
+                const kelas = kelasByJurusan[jurusanId] ?? [];
+                kelas.forEach(k => {
+                    const prefix = jurusanKode ? `[${jurusanKode}] ` : '';
+                    options.push({
+                        id: k.id,
+                        label: `${prefix}${k.nama}`
                     });
-                };
-
-                // Pilihan 1
-                addKelas(item.jurusan_pilihan1_id, item.jurusan_pilihan1_kode, item.jurusan_pilihan1_nama);
-                // Pilihan 2
-                addKelas(item.jurusan_pilihan2_id, item.jurusan_pilihan2_kode, item.jurusan_pilihan2_nama);
+                });
 
                 return options;
             },

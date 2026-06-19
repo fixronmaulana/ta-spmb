@@ -120,10 +120,62 @@ class PeriodeModel extends Model
     }
 
     /**
+     * Cek apakah periode ini SAH untuk dipublikasikan pengumuman kelulusannya.
+     *
+     * Guard ini sengaja diletakkan di model (bukan hanya di controller) agar
+     * tidak bisa dilewati siapa pun yang memanggil publish() langsung —
+     * baik dari controller lain, command, maupun kode baru di masa depan.
+     *
+     * @return array{ok: bool, reason: ?string, sisa?: int}
+     */
+    public function canPublish(int $id): array
+    {
+        $periode = $this->find($id);
+
+        if (! $periode) {
+            return ['ok' => false, 'reason' => 'Periode tidak ditemukan.'];
+        }
+
+        if ((bool) $periode->is_published) {
+            return ['ok' => false, 'reason' => 'Pengumuman periode ini sudah pernah dipublikasikan sebelumnya.'];
+        }
+
+        $sisaBelumProses = (int) db_connect()->table('pendaftaran')
+            ->where('periode_id', $id)
+            ->where('status', 'seleksi')
+            ->where('deleted_at IS NULL')
+            ->countAllResults();
+
+        if ($sisaBelumProses > 0) {
+            return [
+                'ok'     => false,
+                'reason' => "Pengumuman belum bisa dipublikasikan. Masih ada {$sisaBelumProses} peserta dengan status "
+                    . "'Menunggu Seleksi' yang belum ditetapkan. Selesaikan penetapan kelulusan semua peserta terlebih dahulu.",
+                'sisa'   => $sisaBelumProses,
+            ];
+        }
+
+        return ['ok' => true, 'reason' => null];
+    }
+
+    /**
      * Publish pengumuman kelulusan.
+     *
+     * Menjalankan canPublish() lebih dulu — jika tidak lolos, melempar
+     * RuntimeException berisi pesan yang sudah siap ditampilkan ke admin.
+     * Ini mencegah is_published ke-set 1 secara prematur dari jalur mana pun,
+     * termasuk jika ada kode baru di masa depan yang lupa memvalidasi sendiri.
+     *
+     * @throws \RuntimeException jika periode belum memenuhi syarat publish.
      */
     public function publish(int $id): bool
     {
+        $check = $this->canPublish($id);
+
+        if (! $check['ok']) {
+            throw new \RuntimeException($check['reason']);
+        }
+
         return $this->update($id, ['is_published' => 1]);
     }
 

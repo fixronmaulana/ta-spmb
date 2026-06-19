@@ -162,13 +162,25 @@ class MasterDataController extends BaseController
             ->with('active_tab', 'periode');
     }
 
-    // public function publishPeriode(int $id)
-    // {
-    //     $this->periodeModel->publish($id);
-    //     return redirect()->to(base_url('admin/master-data'))
-    //         ->with('success', 'Pengumuman periode berhasil dipublikasikan.')
-    //         ->with('active_tab', 'periode');
-    // }
+    // =========================================================
+    // publishPeriode() DIHAPUS (sengaja) — TIDAK ada penggantinya di
+    // modul MasterData, baik route, controller, maupun tombol/link di view.
+    //
+    // Publish pengumuman kelulusan HANYA bisa dilakukan dari satu pintu
+    // resmi: SeleksiController::publish() via POST /admin/seleksi/publish,
+    // karena di sana ada guard wajib:
+    // - periode yang dipublish = periode aktif
+    // - belum pernah dipublish sebelumnya
+    // - 0 peserta yang masih berstatus 'seleksi' (semua sudah ditetapkan)
+    // dan otomatis mengirim notifikasi resmi ke peserta lulus & tidak lulus.
+    //
+    // Riwayat: method ini dulu memanggil $this->periodeModel->publish($id)
+    // langsung tanpa guard apa pun, dipicu dari tombol di tab Master Data
+    // > Periode yang muncul tepat saat periode baru diaktifkan — sebelum
+    // satu pun peserta diseleksi. Akibatnya is_published bisa ke-set 1
+    // prematur dan mengunci SeleksiController::tetapkan() padahal belum
+    // ada penetapan sama sekali.
+    // =========================================================
 
     public function hapusPeriode(int $id)
     {

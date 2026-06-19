@@ -11,15 +11,14 @@ class DaftarUlangModel extends Model
     protected $returnType    = 'object';
     protected $useTimestamps = true;
 
-    // FIX: tambah kolom nis, nama_kelas, nama_file_bukti
     protected $allowedFields = [
         'pendaftaran_id',
         'user_id',
         'kelas_id',
-        'nis',              // NIS yang di-generate saat konversi ke buku induk (tidak diisi manual lagi)
-        'nama_kelas',       // Nama kelas yang ditetapkan admin
+        'nis',
+        'nama_kelas',
         'bukti_pembayaran_path',
-        'nama_file_bukti',  // Nama asli file bukti (untuk ditampilkan)
+        'nama_file_bukti',
         'nominal_pembayaran',
         'catatan_siswa',
         'status',
@@ -29,18 +28,57 @@ class DaftarUlangModel extends Model
     ];
 
     // ── Status constants ─────────────────────────────────────────────────
-    const STATUS_PENDING       = 'pending';
-    const STATUS_DIKONFIRMASI  = 'dikonfirmasi';
-    const STATUS_DITOLAK       = 'ditolak';
+    const STATUS_PENDING      = 'pending';
+    const STATUS_DIKONFIRMASI = 'dikonfirmasi';
+    const STATUS_DITOLAK      = 'ditolak';
 
+    // =========================================================
+    // FIX #3: getByPendaftaranId sekarang ambil yang TERBARU
+    // (dipakai untuk cek status terkini / redirect guard)
+    // =========================================================
     public function getByPendaftaranId(int $pendaftaranId): ?object
     {
-        return $this->where('pendaftaran_id', $pendaftaranId)->first();
+        return $this->where('pendaftaran_id', $pendaftaranId)
+            ->orderBy('id', 'DESC')
+            ->first();
     }
 
     /**
-     * getWithRelations — include jurusan pilihan 1 & 2 dari pendaftaran,
-     * sehingga admin bisa menampilkan dropdown kelas berdasarkan pilihan calon siswa.
+     * FIX #3: Ambil semua riwayat daftar ulang satu pendaftar,
+     * diurutkan dari yang terbaru.
+     */
+    public function getHistoryByPendaftaranId(int $pendaftaranId): array
+    {
+        return $this->where('pendaftaran_id', $pendaftaranId)
+            ->orderBy('id', 'DESC')
+            ->findAll();
+    }
+
+    /**
+     * FIX #3: Cek apakah ada row dengan status dikonfirmasi
+     * untuk pendaftaran ini (kunci agar tidak bisa submit ulang
+     * setelah dikonfirmasi).
+     */
+    public function getDikonfirmasiByPendaftaranId(int $pendaftaranId): ?object
+    {
+        return $this->where('pendaftaran_id', $pendaftaranId)
+            ->where('status', self::STATUS_DIKONFIRMASI)
+            ->first();
+    }
+
+    /**
+     * FIX #3: Cek apakah ada row dengan status PENDING (sedang diproses).
+     * Dipakai untuk mencegah double submit.
+     */
+    public function getPendingByPendaftaranId(int $pendaftaranId): ?object
+    {
+        return $this->where('pendaftaran_id', $pendaftaranId)
+            ->where('status', self::STATUS_PENDING)
+            ->first();
+    }
+
+    /**
+     * getWithRelations — include jurusan diterima + pilihan 1 & 2.
      */
     public function getWithRelations(int $id): ?object
     {
@@ -72,8 +110,8 @@ class DaftarUlangModel extends Model
     }
 
     /**
-     * getAllWithRelations — include jurusan pilihan 1 & 2 untuk keperluan
-     * modal validasi (populate dropdown kelas dari pilihan calon siswa).
+     * getAllWithRelations — untuk tabel admin, ambil semua pengajuan
+     * beserta jurusan diterima.
      */
     public function getAllWithRelations(string $status = '', string $search = ''): array
     {
@@ -107,7 +145,7 @@ class DaftarUlangModel extends Model
 
         if ($search) {
             $q->groupStart()
-                ->like('u.nama_lengkap',   $search)
+                ->like('u.nama_lengkap',     $search)
                 ->orLike('dds.nama_lengkap', $search)
                 ->orLike('p.no_pendaftaran', $search)
                 ->groupEnd();

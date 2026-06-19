@@ -448,13 +448,6 @@ $activeTab = session()->getFlashdata('active_tab') ?? 'jurusan';
                                                 <button type="submit" class="px-2 py-1 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors">Set Aktif</button>
                                             </form>
                                         <?php endif; ?>
-                                        <?php if ($p->is_active && !$p->is_published): ?>
-    <a href="<?= base_url('admin/seleksi') ?>"
-        class="px-2 py-1 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-        title="Publish pengumuman kelulusan hanya bisa dilakukan dari halaman Penetapan Kelulusan, setelah semua peserta selesai diproses.">
-        Kelola Kelulusan →
-    </a>
-<?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
