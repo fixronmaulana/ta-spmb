@@ -11,8 +11,8 @@ $statusMap = [
     'seleksi'      => ['label' => 'Menunggu Verifikasi',   'badge' => 'status-pending',  'pct' => 75],
     'lulus'        => ['label' => 'Diterima',              'badge' => 'status-verified', 'pct' => 100],
     'tidak_lulus'  => ['label' => 'Tidak Diterima',        'badge' => 'status-rejected', 'pct' => 100],
-    'daftar_ulang' => ['label' => 'Terverifikasi',         'badge' => 'status-verified', 'pct' => 100],
-    'siswa_aktif'  => ['label' => 'Terverifikasi',         'badge' => 'status-verified', 'pct' => 100],
+    'daftar_ulang' => ['label' => 'Diterima',              'badge' => 'status-verified', 'pct' => 100],
+    'siswa_aktif'  => ['label' => 'Diterima',              'badge' => 'status-verified', 'pct' => 100],
 ];
 
 $sm         = $statusMap[$currentStatus] ?? $statusMap['draft'];
@@ -219,7 +219,7 @@ function dashIcon(string $name, string $cls = 'w-6 h-6'): string
                 <div class="min-w-0">
                     <p class="text-sm" style="color:hsl(220,15%,50%);">Jurusan Pilihan</p>
                     <p class="font-bold text-lg truncate">
-                        <?= $p ? esc($p->jurusan_pilihan_1 ?? '-') : '-' ?>
+                        <?= $p ? esc($p->jurusan_pilihan1_nama ?? '-') : '-' ?>
                     </p>
                 </div>
             </div>

@@ -35,25 +35,25 @@ class DaftarUlangController extends BaseController
                 ->with('error', 'Anda tidak memenuhi syarat untuk daftar ulang saat ini.');
         }
 
-        // FIX #3: Cek apakah sudah ada yang DIKONFIRMASI — jika ya, tidak perlu form lagi
+        // Cek apakah sudah ada yang DIKONFIRMASI — jika ya, tidak perlu form lagi
         $dikonfirmasi = $this->model->getDikonfirmasiByPendaftaranId($pendaftaran->id);
         if ($dikonfirmasi) {
             return redirect()->to(base_url('dashboard/daftar-ulang/status'))
                 ->with('info', 'Daftar ulang Anda sudah dikonfirmasi oleh admin.');
         }
 
-        // FIX #3: Cek apakah ada PENDING — jika ya, tampilkan info tapi form ditutup
+        // Cek apakah ada PENDING — jika ya, tampilkan info tapi form ditutup
         $pending = $this->model->getPendingByPendaftaranId($pendaftaran->id);
 
         $pendaftaran = $this->pendaftaranModel->getWithRelations($pendaftaran->id);
 
-        // FIX #1: Kelas yang ditampilkan HANYA dari jurusan_diterima_id
+        // #1: Kelas yang ditampilkan HANYA dari jurusan_diterima_id
         $kelasList = $this->kelasModel->getKelasAktif((int) $pendaftaran->jurusan_diterima_id);
 
         return $this->render('App\Modules\DaftarUlang\Views\form', [
             'title'       => 'Daftar Ulang',
             'pendaftaran' => $pendaftaran,
-            'pending'     => $pending,    // FIX #3: info pengajuan yg sedang diproses
+            'pending'     => $pending,
             'kelasList'   => $kelasList,
         ]);
     }
@@ -61,10 +61,7 @@ class DaftarUlangController extends BaseController
     // =========================================================
     // SUBMIT
     // =========================================================
-    /**
-     * FIX #3: Selalu INSERT row baru — tidak pernah UPDATE existing.
-     * FIX #1: Validasi kelas_id harus berasal dari jurusan_diterima_id.
-     */
+
     public function submit()
     {
         $isAjax = $this->request->isAJAX();
@@ -76,7 +73,7 @@ class DaftarUlangController extends BaseController
             return $this->failResponse($isAjax, 403, 'Tidak dapat melakukan daftar ulang.');
         }
 
-        // FIX #3: Sudah dikonfirmasi → tolak submit
+        // #3: Sudah dikonfirmasi → tolak submit
         $dikonfirmasi = $this->model->getDikonfirmasiByPendaftaranId($pendaftaran->id);
         if ($dikonfirmasi) {
             return $this->failResponse(
@@ -87,7 +84,7 @@ class DaftarUlangController extends BaseController
             );
         }
 
-        // FIX #3: Ada PENDING → tolak submit (cegah double submit)
+        // #3: Ada PENDING → tolak submit (cegah double submit)
         $pending = $this->model->getPendingByPendaftaranId($pendaftaran->id);
         if ($pending) {
             return $this->failResponse(
@@ -104,7 +101,7 @@ class DaftarUlangController extends BaseController
             return $this->failResponse($isAjax, 422, 'Nominal pembayaran wajib diisi dan harus lebih dari 0.');
         }
 
-        // ── FIX #1: Validasi kelas_id harus dari jurusan_diterima_id ─────
+        // ── #1: Validasi kelas_id harus dari jurusan_diterima_id ─────
         $kelasId     = $this->request->getPost('kelas_id') ?: null;
         $pendaftaran = $this->pendaftaranModel->getWithRelations($pendaftaran->id);
 
@@ -142,7 +139,7 @@ class DaftarUlangController extends BaseController
             return $this->failResponse($isAjax, 422, $upload['message']);
         }
 
-        // ── FIX #3: Selalu INSERT row baru ───────────────────────────────
+        // ── #3: Selalu INSERT row baru ───────────────────────────────
         $this->model->insert([
             'pendaftaran_id'        => $pendaftaran->id,
             'user_id'               => $userId,
@@ -194,7 +191,7 @@ class DaftarUlangController extends BaseController
         $userId      = $this->userId();
         $pendaftaran = $this->pendaftaranModel->getByUserId($userId);
 
-        // FIX #3: tampilkan pengajuan terbaru dan semua riwayat
+        // #3: tampilkan pengajuan terbaru dan semua riwayat
         $daftarUlang = null;
         $riwayat     = [];
         if ($pendaftaran) {

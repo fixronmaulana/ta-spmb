@@ -32,14 +32,7 @@ class VerifikasiController extends BaseController
         $this->jurusanModel     = new JurusanModel();
         $this->notifService     = new NotifikasiService();
     }
-
-    // =========================================================
-    // INDEX
-    // FIX: pakai db_connect() langsung agar tidak ada state
-    //      WHERE carryover dari Model query builder.
-    //      COALESCE(dds.nama_lengkap, u.nama_lengkap) sebagai
-    //      nama_tampil — aman meski data_diri belum diisi siswa.
-    // =========================================================
+   
     public function index()
     {
         $status        = $this->request->getGet('status')  ?? 'submitted';
@@ -126,7 +119,6 @@ class VerifikasiController extends BaseController
 
     // =========================================================
     // DETAIL
-    // FIX: tambah prevId/nextId navigasi antar pendaftar
     // =========================================================
     public function detail(int $id)
     {

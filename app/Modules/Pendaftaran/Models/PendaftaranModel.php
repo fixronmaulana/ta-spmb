@@ -4,13 +4,6 @@ namespace App\Modules\Pendaftaran\Models;
 
 use CodeIgniter\Model;
 
-/**
- * FIXED (seluruh file):
- *  - Semua alias 'pendaftarans.*' → 'pendaftaran.*'   (nama tabel = pendaftaran)
- *  - Semua join 'jurusans'        → 'jurusan'          (nama tabel = jurusan)
- *  - Semua join/ref 'periodes'    → 'periode'          (nama tabel = periode)
- *  - Semua join 'data_diri_siswas' TETAP (nama tabel = data_diri_siswas)
- */
 class PendaftaranModel extends Model
 {
     protected $table          = 'pendaftaran';
@@ -79,9 +72,6 @@ class PendaftaranModel extends Model
         return $result;
     }
 
-    /**
-     * FIXED: join 'jurusan' bukan 'jurusans', alias 'pendaftaran' bukan 'pendaftarans'
-     */
     public function getStatsByJurusan(): array
     {
         return $this->select('
@@ -94,20 +84,15 @@ class PendaftaranModel extends Model
                 SUM(CASE WHEN pendaftaran.status = "daftar_ulang" THEN 1 ELSE 0 END) AS total_daftar_ulang,
                 SUM(CASE WHEN pendaftaran.status = "siswa_aktif"  THEN 1 ELSE 0 END) AS total_siswa_aktif
             ')
-            // FIXED: 'jurusan' bukan 'jurusans'
             ->join('jurusan', 'jurusan.id = pendaftaran.jurusan_pilihan1_id', 'right')
             ->groupBy('jurusan.id')
             ->findAll();
     }
 
-    /**
-     * FIXED: raw query — 'periodes' → 'periode', 'pendaftarans' → 'pendaftaran'
-     */
     public function getStatsByGelombang(): array
     {
         $db = db_connect();
 
-        // FIXED: 'periode' bukan 'periodes', 'pendaftaran' bukan 'pendaftarans'
         $rows = $db->query("
             SELECT
                 p.nama                   AS nama,
@@ -207,7 +192,6 @@ class PendaftaranModel extends Model
                 j1.nama as jurusan_pilihan1_nama, j1.kode as jurusan_pilihan1_kode')
             ->join('users u',               'u.id = pendaftaran.user_id')
             ->join('data_diri_siswas dds',  'dds.pendaftaran_id = pendaftaran.id', 'left')
-            // FIXED: 'jurusan' bukan 'jurusans'
             ->join('jurusan j1',            'j1.id = pendaftaran.jurusan_pilihan1_id', 'left')
             ->where('pendaftaran.status', $status)
             ->orderBy('pendaftaran.created_at', 'DESC')
@@ -223,7 +207,6 @@ class PendaftaranModel extends Model
                 u.email as email_calon')
             ->join('data_diri_siswas dds', 'dds.pendaftaran_id = pendaftaran.id', 'left')
             ->join('users u',              'u.id = pendaftaran.user_id')
-            // FIXED: 'jurusan' bukan 'jurusans'
             ->join('jurusan j1',           'j1.id = pendaftaran.jurusan_pilihan1_id', 'left')
             ->join('jurusan j2',           'j2.id = pendaftaran.jurusan_pilihan2_id', 'left')
             ->whereIn('pendaftaran.status', ['verifikasi', 'seleksi', 'lulus', 'tidak_lulus'])
@@ -269,9 +252,6 @@ class PendaftaranModel extends Model
         ]);
     }
 
-    /**
-     * FIXED: join 'jurusan' bukan 'jurusans', 'periode' bukan 'periodes'
-     */
     public function getWithRelations(int $pendaftaranId): ?object
     {
         return $this->select('pendaftaran.*,
@@ -281,11 +261,9 @@ class PendaftaranModel extends Model
                 u.nama_lengkap as nama_akun, u.email,
                 p.nama as nama_periode, p.tanggal_mulai, p.tanggal_selesai')
             ->join('users u',    'u.id = pendaftaran.user_id')
-            // FIXED: 'jurusan' bukan 'jurusans'
             ->join('jurusan j1', 'j1.id = pendaftaran.jurusan_pilihan1_id', 'left')
             ->join('jurusan j2', 'j2.id = pendaftaran.jurusan_pilihan2_id', 'left')
             ->join('jurusan jd', 'jd.id = pendaftaran.jurusan_diterima_id', 'left')
-            // FIXED: 'periode' bukan 'periodes'
             ->join('periode p',  'p.id = pendaftaran.periode_id', 'left')
             ->where('pendaftaran.id', $pendaftaranId)
             ->first();

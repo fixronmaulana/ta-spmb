@@ -34,9 +34,6 @@ class DaftarUlangAdminController extends BaseController
         $daftars = $this->model->getAllWithRelations($status, $search);
         $stats   = $this->model->getStatsByStatus();
 
-        // FIX #2: Kelas dikelompokkan per jurusan_id untuk dropdown admin.
-        // Diambil semua jurusan agar fleksibel, tapi saat render modal
-        // JS hanya menampilkan kelas dari jurusan_diterima_id (bukan pilihan1/2).
         $kelasList      = $this->kelasModel->getWithJurusan();
         $kelasByJurusan = [];
         foreach ($kelasList as $k) {
@@ -97,7 +94,6 @@ class DaftarUlangAdminController extends BaseController
 
     // =========================================================
     // KONFIRMASI
-    // FIX #2: Validasi kelas_id wajib dari jurusan_diterima_id
     // =========================================================
     public function konfirmasi(int $id)
     {
