@@ -27,20 +27,6 @@ class JurusanModel extends Model
         return $result;
     }
 
-    // =========================================================
-    // KUOTA: hitung berapa slot yang sudah terpakai per jurusan
-    //
-    // PERBAIKAN:
-    //   Sebelumnya dihitung dari jurusan_pilihan1_id → tidak akurat
-    //   karena calon siswa bisa diterima di jurusan pilihan 2.
-    //
-    //   Sekarang:
-    //   - Untuk status 'lulus', 'daftar_ulang', 'siswa_aktif'
-    //     → dihitung dari jurusan_diterima_id (jurusan yang BENAR-BENAR diterima)
-    //   - Untuk status antrian sebelum seleksi (submitted, verifikasi, seleksi)
-    //     → tetap dihitung dari jurusan_pilihan1_id (estimasi demand)
-    // =========================================================
-
     /**
      * Hitung jumlah slot TERPAKAI (sudah ditetapkan lulus/diterima) per jurusan.
      * Dihitung dari jurusan_diterima_id untuk status pasca-seleksi.
@@ -91,6 +77,62 @@ class JurusanModel extends Model
     }
 
     /**
+     *
+     * @param  int      $jurusanId
+     * @param  int|null $periodeId             null = semua periode
+     * @param  int|null $excludePendaftaranId  ID pendaftaran milik pengisi form saat ini,
+     *                                         dikecualikan supaya tidak memblokir dirinya sendiri saat edit ulang
+     * @return int
+     */
+    public function getTerpakaiPendaftar(int $jurusanId, ?int $periodeId = null, ?int $excludePendaftaranId = null): int
+    {
+        $db      = db_connect();
+        $builder = $db->table('pendaftaran')
+            ->where('jurusan_pilihan1_id', $jurusanId)
+            ->whereIn('status', ['submitted', 'verifikasi', 'revisi', 'seleksi', 'lulus', 'daftar_ulang', 'siswa_aktif'])
+            ->where('deleted_at IS NULL');
+
+        if ($periodeId !== null) {
+            $builder->where('periode_id', $periodeId);
+        }
+
+        if ($excludePendaftaranId !== null) {
+            $builder->where('id !=', $excludePendaftaranId);
+        }
+
+        return (int) $builder->countAllResults();
+    }
+
+    /**
+     * Ambil semua jurusan aktif beserta kuota TERPAKAI BERBASIS PENDAFTAR
+     * (bukan hanya yang sudah lulus). Dipakai khusus untuk FORMULIR
+     * PENDAFTARAN (step2) agar indikator kuota yang dilihat calon siswa
+     * sinkron 1:1 dengan validasi backend saat submit.
+     *
+     * Properti tambahan per object:
+     *   ->terpakai    (int)  jumlah pendaftar yang sudah memesan slot ini
+     *   ->sisa_kuota  (int)  sisa slot tersisa
+     *   ->penuh       (bool) true jika sisa_kuota == 0
+     *
+     * @param  int|null $periodeId
+     * @param  int|null $excludePendaftaranId  ID pendaftaran milik pengisi form saat ini
+     * @return array
+     */
+    public function getAllActiveWithKuotaPendaftaran(?int $periodeId = null, ?int $excludePendaftaranId = null): array
+    {
+        $jurusans = $this->getAllActive();
+
+        foreach ($jurusans as $j) {
+            $terpakai      = $this->getTerpakaiPendaftar($j->id, $periodeId, $excludePendaftaranId);
+            $j->terpakai   = $terpakai;
+            $j->sisa_kuota = max(0, (int) $j->kuota - $terpakai);
+            $j->penuh      = ($j->sisa_kuota === 0);
+        }
+
+        return $jurusans;
+    }
+
+    /**
      * Hitung sisa kuota = kuota - terpakai (dari jurusan_diterima_id).
      *
      * @param  int      $jurusanId
@@ -105,8 +147,10 @@ class JurusanModel extends Model
     }
 
     /**
-     * Ambil semua jurusan aktif beserta kuota terpakai dan sisa.
-     * Digunakan di form step2 (tampilan ke pendaftar) dan dashboard admin.
+     * Ambil semua jurusan aktif beserta kuota terpakai (BERBASIS YANG SUDAH LULUS)
+     * dan sisa. Dipakai untuk kebutuhan ADMIN/LAPORAN/SELEKSI (mis. dashboard
+     * kepala sekolah, laporan per jurusan) — bukan untuk form pendaftaran publik.
+     * Untuk form pendaftaran (step2), gunakan getAllActiveWithKuotaPendaftaran().
      *
      * Properti tambahan per object:
      *   ->terpakai    (int)  jumlah slot sudah diterima (dari jurusan_diterima_id)

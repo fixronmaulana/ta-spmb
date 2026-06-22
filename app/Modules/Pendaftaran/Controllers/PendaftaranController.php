@@ -51,7 +51,20 @@ class PendaftaranController extends BaseController
                 ->with('error', $statusPeriode['message']);
         }
 
-        $pendaftaran = $this->service->getOrCreate($this->userId());
+        // ── VALIDASI: draft lama harus berasal dari periode yang SAMA
+        // dengan periode yang sedang aktif sekarang (lihat catatan di
+        // PendaftaranService::getOrCreate untuk skenario lengkapnya).
+        if ($pendaftaran && (int) $pendaftaran->periode_id !== (int) $statusPeriode['periode']->id) {
+            return redirect()->to(base_url('dashboard'))
+                ->with('error', 'Draft pendaftaran Anda berasal dari periode SPMB sebelumnya yang sudah berakhir. '
+                    . "Silakan hubungi panitia SPMB untuk informasi pendaftaran periode {$statusPeriode['periode']->nama}.");
+        }
+
+        try {
+            $pendaftaran = $this->service->getOrCreate($this->userId());
+        } catch (\RuntimeException $e) {
+            return redirect()->to(base_url('dashboard'))->with('error', $e->getMessage());
+        }
 
         $step = max(1, min(4, $pendaftaran->step_terakhir ?? 1));
         return redirect()->to(base_url("dashboard/formulir/step/{$step}"));
@@ -85,12 +98,34 @@ class PendaftaranController extends BaseController
                 ->with('error', $statusPeriode['message']);
         }
 
-        $pendaftaran = $this->service->getOrCreate($this->userId());
+        // ── VALIDASI: draft lama harus berasal dari periode yang SAMA
+        // dengan periode yang sedang aktif sekarang. Mencegah draft "basi"
+        // dari periode yang sudah ditutup ikut diedit/dihitung kuotanya
+        // di bawah periode baru yang sedang berjalan.
+        if ($pendaftaranCek && (int) $pendaftaranCek->periode_id !== (int) $statusPeriode['periode']->id) {
+            return redirect()->to(base_url('dashboard'))
+                ->with('error', 'Draft pendaftaran Anda berasal dari periode SPMB sebelumnya yang sudah berakhir. '
+                    . "Silakan hubungi panitia SPMB untuk informasi pendaftaran periode {$statusPeriode['periode']->nama}.");
+        }
+
+        try {
+            $pendaftaran = $this->service->getOrCreate($this->userId());
+        } catch (\RuntimeException $e) {
+            return redirect()->to(base_url('dashboard'))->with('error', $e->getMessage());
+        }
 
         $dataDiri  = $this->dataDiriModel->getByPendaftaranId($pendaftaran->id);
         $dokumens  = $this->dokumenModel->getByPendaftaranId($pendaftaran->id);
         $jurusanModel = new JurusanModel();
-        $jurusans  = $jurusanModel->getAllActiveWithKuota($pendaftaran->periode_id ?? null);
+        // Kuota di sini dihitung berbasis PENDAFTAR AKTIF (submitted/verifikasi/revisi/
+        // seleksi/lulus/daftar_ulang/siswa_aktif), bukan hanya yang sudah lulus.
+        // Ini supaya indikator yang dilihat calon siswa SELALU sinkron dengan validasi
+        // kuota yang sama persis dijalankan backend saat klik "Simpan & Lanjutkan"
+        // (lihat PendaftaranService::saveStep2 & submitDariStep4).
+        $jurusans  = $jurusanModel->getAllActiveWithKuotaPendaftaran(
+            $pendaftaran->periode_id ?? null,
+            $pendaftaran->id ?? null
+        );
         $draftData = $this->pendaftaranModel->getDraft($pendaftaran->id, $stepNum);
 
         $data = [
@@ -150,6 +185,21 @@ class PendaftaranController extends BaseController
             }
             return redirect()->to(base_url('dashboard'))
                 ->with('error', $statusPeriode['message']);
+        }
+
+        // ── VALIDASI: pendaftaran ini harus berasal dari periode yang
+        // SAMA dengan periode yang sedang aktif sekarang. Mencegah submit
+        // step pada draft "basi" dari periode lama yang sudah ditutup.
+        if ((int) $pendaftaran->periode_id !== (int) $statusPeriode['periode']->id) {
+            $msg = 'Pendaftaran Anda berasal dari periode SPMB sebelumnya yang sudah berakhir. '
+                . "Silakan hubungi panitia SPMB untuk informasi pendaftaran periode {$statusPeriode['periode']->nama}.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(422)->setJSON([
+                    'success' => false,
+                    'message' => $msg,
+                ]);
+            }
+            return redirect()->to(base_url('dashboard'))->with('error', $msg);
         }
 
         $rules = PendaftaranValidation::getRulesForStep($stepNum);
@@ -247,11 +297,22 @@ class PendaftaranController extends BaseController
         }
 
         // ── VALIDASI PERIODE AKTIF (BE) ──────────────────────────
-        $periodeModel = new PeriodeModel();
-        if (! $periodeModel->getStatusPendaftaran()['buka']) {
+        $periodeModel  = new PeriodeModel();
+        $statusPeriode = $periodeModel->getStatusPendaftaran();
+
+        if (! $statusPeriode['buka']) {
             return $this->response->setStatusCode(422)->setJSON([
                 'success' => false,
                 'message' => 'Periode pendaftaran sudah ditutup. Draft tidak dapat disimpan lagi.',
+            ]);
+        }
+
+        // ── VALIDASI: draft ini harus berasal dari periode yang sedang
+        // aktif sekarang, bukan periode lama yang sudah ditutup.
+        if ((int) $pendaftaran->periode_id !== (int) $statusPeriode['periode']->id) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'success' => false,
+                'message' => 'Draft ini berasal dari periode SPMB sebelumnya yang sudah berakhir dan tidak dapat disimpan lagi.',
             ]);
         }
 

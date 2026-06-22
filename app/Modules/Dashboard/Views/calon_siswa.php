@@ -64,7 +64,7 @@ $periodeBuka   = ($periodeInfo['status'] ?? null) === 'open';
 
 // ── Announcements (static, matches React array) ────────────────
 $announcements = [
-    ['text' => 'Batas waktu pengumpulan berkas gelombang 1: 31 Maret 2026', 'date' => '25 Jan 2026'],
+    ['text' => 'Batas waktu pengumpulan berkas gelombang 3: 30 Juni 2026', 'date' => '25 Jan 2026'],
     ['text' => 'Pastikan foto yang diupload jelas dan sesuai ketentuan',     'date' => '20 Jan 2026'],
     ['text' => 'Jika ada kesulitan, hubungi panitia SPMB melalui WhatsApp', 'date' => '15 Jan 2026'],
 ];

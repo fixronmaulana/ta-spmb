@@ -34,16 +34,39 @@ class PendaftaranService
     public function getOrCreate(int $userId): object
     {
         $existing = $this->pendaftaranModel->getByUserId($userId);
-        if ($existing) return $existing;
 
         // ── VALIDASI PERIODE AKTIF (defense in depth) ────────────
-                $statusPeriode = $this->periodeModel->getStatusPendaftaran();
+        $statusPeriode = $this->periodeModel->getStatusPendaftaran();
 
         if (! $statusPeriode['buka']) {
             throw new \RuntimeException($statusPeriode['message']);
         }
 
         $periode = $statusPeriode['periode'];
+
+        if ($existing) {
+            // ── VALIDASI: draft/revisi LAMA harus berasal dari periode
+            // YANG SAMA dengan periode yang sedang aktif sekarang.
+            //
+            // Tanpa guard ini, draft yang dibuat saat Periode A masih
+            // berjalan tapi tidak sempat disubmit (lalu Periode A ditutup
+            // dan Periode B dibuka) akan tetap "hidup" dan ikut dipakai/
+            // diedit di bawah jendela Periode B — padahal periode_id-nya
+            // masih menempel ke Periode A yang sudah tidak relevan.
+            // Ini mengacaukan hitungan kuota per periode (lihat
+            // JurusanModel::getTerpakaiPendaftar) dan laporan per periode.
+            if (
+                in_array($existing->status, ['draft', 'revisi'], true)
+                && (int) $existing->periode_id !== (int) $periode->id
+            ) {
+                throw new \RuntimeException(
+                    'Draft pendaftaran Anda berasal dari periode SPMB sebelumnya yang sudah berakhir. '
+                        . "Silakan hubungi panitia SPMB untuk informasi pendaftaran periode {$periode->nama}."
+                );
+            }
+
+            return $existing;
+        }
 
         $id = $this->pendaftaranModel->insert([
             'user_id'       => $userId,
@@ -174,7 +197,7 @@ class PendaftaranService
 
             // Hitung sisa kuota — kecualikan pendaftaran SAAT INI
             // agar pendaftar yang mengedit ulang step2 tidak memblokir dirinya sendiri
-            $terpakai1 = $this->getTerpakaiExclude((int) $pilihan1, $periodeId, $pendaftaranId);
+            $terpakai1 = $this->jurusanModel->getTerpakaiPendaftar((int) $pilihan1, $periodeId, $pendaftaranId);
             $sisa1     = max(0, (int) $jurusan1->kuota - $terpakai1);
 
             if ($sisa1 <= 0) {
@@ -191,7 +214,7 @@ class PendaftaranService
                     return ['success' => false, 'message' => 'Jurusan pilihan kedua tidak ditemukan.'];
                 }
 
-                $terpakai2 = $this->getTerpakaiExclude((int) $pilihan2, $periodeId, $pendaftaranId);
+                $terpakai2 = $this->jurusanModel->getTerpakaiPendaftar((int) $pilihan2, $periodeId, $pendaftaranId);
                 $sisa2     = max(0, (int) $jurusan2->kuota - $terpakai2);
 
                 if ($sisa2 <= 0) {
@@ -216,26 +239,6 @@ class PendaftaranService
             log_message('error', 'PendaftaranService::saveStep2 - ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
-    }
-
-    /**
-     * Hitung terpakai dari jurusan tertentu, kecuali pendaftaran dengan ID tertentu.
-     * Digunakan agar edit ulang step2 tidak memblokir pendaftar yang bersangkutan.
-     */
-    private function getTerpakaiExclude(int $jurusanId, ?int $periodeId, int $excludePendaftaranId): int
-    {
-        $db      = db_connect();
-        $builder = $db->table('pendaftaran')
-            ->where('jurusan_pilihan1_id', $jurusanId)
-            ->whereIn('status', ['submitted', 'verifikasi', 'revisi', 'seleksi', 'lulus', 'daftar_ulang', 'siswa_aktif'])
-            ->where('deleted_at IS NULL')
-            ->where('id !=', $excludePendaftaranId);
-
-        if ($periodeId !== null) {
-            $builder->where('periode_id', $periodeId);
-        }
-
-        return (int) $builder->countAllResults();
     }
 
     // =========================================================
@@ -355,7 +358,7 @@ class PendaftaranService
         $periodeId = $pendaftaran->periode_id ?? null;
         $jurusan1  = $this->jurusanModel->find((int) $pendaftaran->jurusan_pilihan1_id);
         if ($jurusan1) {
-            $terpakai = $this->getTerpakaiExclude(
+            $terpakai = $this->jurusanModel->getTerpakaiPendaftar(
                 (int) $pendaftaran->jurusan_pilihan1_id,
                 $periodeId,
                 $pendaftaranId

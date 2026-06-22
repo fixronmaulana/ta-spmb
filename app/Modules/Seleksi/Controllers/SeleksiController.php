@@ -355,12 +355,12 @@ class SeleksiController extends BaseController
 
         foreach ($pendaftarans as $p) {
             if ($p->status === 'lulus') {
-                $title = '🎉 Pengumuman Resmi PPDB — Anda Diterima!';
-                $msg   = 'Selamat! Pengumuman resmi PPDB SMK Al-Munawwir telah diterbitkan. '
+                $title = '🎉 Pengumuman Resmi SPMB - Anda Diterima!';
+                $msg   = 'Selamat! Pengumuman resmi SPMB SMK Al-Munawwir telah diterbitkan. '
                     . 'Anda dinyatakan DITERIMA. Klik untuk melihat detail dan informasi daftar ulang.';
             } else {
-                $title = 'Pengumuman Resmi PPDB SMK Al-Munawwir';
-                $msg   = 'Pengumuman resmi PPDB telah diterbitkan. Mohon maaf, Anda belum dapat diterima '
+                $title = 'Pengumuman Resmi SPMB SMK Al-Munawwir';
+                $msg   = 'Pengumuman resmi SPMB telah diterbitkan. Mohon maaf, Anda belum dapat diterima '
                     . 'pada periode ini. Klik untuk melihat informasi selengkapnya.';
             }
 

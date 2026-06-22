@@ -76,7 +76,7 @@ class PeriodeModel extends Model
             return [
                 'buka'    => false,
                 'status'  => 'soon',
-                'message' => "Pendaftaran belum dibuka. PPDB {$periode->nama} akan dibuka pada " . format_tanggal($mulai) . '.',
+                'message' => "Pendaftaran belum dibuka. SPMB {$periode->nama} akan dibuka pada " . format_tanggal($mulai) . '.',
                 'periode' => $periode,
             ];
         }

@@ -65,7 +65,7 @@ $routes->group('dashboard', ['filter' => 'auth:calon_siswa'], function ($routes)
     $routes->get('daftar-ulang',                         'App\Modules\DaftarUlang\Controllers\DaftarUlangController::form');
     $routes->post('daftar-ulang',                        'App\Modules\DaftarUlang\Controllers\DaftarUlangController::submit');
     $routes->get('daftar-ulang/status',                  'App\Modules\DaftarUlang\Controllers\DaftarUlangController::status');
-
+    $routes->get('daftar-ulang/(:num)/bukti',            'App\Modules\DaftarUlang\Controllers\DaftarUlangController::streamBukti/$1');
     $routes->get('notifikasi',                           'App\Modules\Notifikasi\Controllers\NotifikasiController::index');
 });
 
