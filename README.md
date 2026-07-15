@@ -1,69 +1,245 @@
-# CodeIgniter 4 Application Starter
+# SPMB — Sistem Penerimaan Murid Baru
+### SMK Al-Munawwir IIBS
 
-## What is CodeIgniter?
+Aplikasi web untuk mengelola proses Penerimaan Murid Baru (PMB) secara daring, mulai dari pendaftaran calon siswa, verifikasi berkas, seleksi, pengumuman kelulusan, daftar ulang, hingga konversi otomatis ke Buku Induk siswa.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+Proyek ini merupakan **Tugas Akhir (TA)** Program Studi Sarjana Terapan Teknologi Rekayasa Perangkat Lunak, Politeknik Negeri Banyuwangi, yang dikembangkan menggunakan metodologi **Iterative Incremental**.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+---
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+## Daftar Isi
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+1. [Gambaran Umum Sistem](#1-gambaran-umum-sistem)
+2. [Fitur Utama](#2-fitur-utama)
+3. [Alur Sistem](#3-alur-sistem)
+4. [Teknologi yang Digunakan](#4-teknologi-yang-digunakan)
+5. [Cara Menjalankan Proyek](#5-cara-menjalankan-proyek)
+6. [Pengembang](#6-pengembang)
+7. [Struktur Proyek](#7-struktur-proyek)
+8. [Pengujian](#8-pengujian)
+9. [Lisensi](#9-lisensi)
 
-## Installation & updates
+---
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+## 1. Gambaran Umum Sistem
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+SPMB adalah sistem informasi berbasis web yang dirancang untuk menggantikan proses penerimaan murid baru yang sebelumnya dilakukan secara manual. Sistem ini mengelola seluruh siklus PMB dalam satu platform terintegrasi dengan tiga peran (*role*) pengguna:
 
-## Setup
+| Peran | Deskripsi |
+|---|---|
+| **Calon Siswa** | Mendaftar, mengunggah berkas, memilih jurusan, memantau status seleksi, dan melakukan daftar ulang. |
+| **Admin TU (Tata Usaha)** | Memverifikasi berkas, mengelola kuota jurusan, melakukan proses seleksi, menerbitkan pengumuman, dan mengelola daftar ulang. |
+| **Kepala Sekolah** | Memantau rekapitulasi dan laporan hasil PMB (dashboard & ekspor laporan). |
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+Sistem dibangun secara modular mengikuti arsitektur CodeIgniter 4, dengan setiap domain fungsional dipisahkan ke dalam modul tersendiri agar mudah dikembangkan dan diuji secara bertahap (iteratif).
 
-## Important Change with index.php
+## 2. Fitur Utama
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+- **Autentikasi & Otorisasi**
+  - Registrasi & login calon siswa dengan verifikasi OTP email
+  - Reset password via email (Brevo SMTP)
+  - Single active session per akun (`session_token`) untuk mencegah login ganda
+  - Role-based access control (calon siswa, admin TU, kepala sekolah)
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+- **Pendaftaran (Pendaftaran Module)**
+  - Form pendaftaran bertahap (*step form*) dengan validasi per langkah
+  - Pemilihan jurusan dengan kuota real-time (defense-in-depth terhadap race condition)
+  - Guard pendaftaran berbasis periode PMB aktif
+  - Generate nomor pendaftaran unik secara aman (anti duplikasi)
+  - Cetak bukti pendaftaran (PDF)
 
-**Please** read the user guide for a better explanation of how CI4 works!
+- **Verifikasi Berkas (Verifikasi Module)**
+  - Admin TU memverifikasi dokumen yang diunggah calon siswa
+  - Status verifikasi per berkas dengan catatan revisi
 
-## Repository Management
+- **Seleksi (Seleksi Module)**
+  - Penetapan hasil seleksi (`tetapkan`) terpisah dari penerbitan pengumuman (`publish`)
+  - Aksi massal (bulk) lulus/tolak dengan modal pemilihan jurusan per baris
+  - Multi-layer status locking (`EDITABLE_STATUSES` / `LOCKED_STATUSES`) untuk menjaga konsistensi data setelah publish
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+- **Pengumuman (Pengumuman Module)**
+  - Publikasi hasil kelulusan kepada calon siswa secara terjadwal
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+- **Daftar Ulang (DaftarUlang Module)**
+  - Konfirmasi daftar ulang oleh siswa yang dinyatakan lulus
+  - Verifikasi ulang berkas dan status registrasi ulang oleh Admin TU
 
-## Server Requirements
+- **Buku Induk (BukuInduk Module)**
+  - Konversi otomatis data siswa yang telah daftar ulang menjadi data Buku Induk
+  - Generate Nomor Induk Siswa (NIS) otomatis
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+- **Laporan & Dashboard**
+  - Dashboard rekap untuk Admin TU dan Kepala Sekolah
+  - Ekspor laporan context-aware ke PDF dan Excel
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+- **Notifikasi**
+  - Notifikasi email otomatis pada tahapan penting alur PMB
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+- **Lain-lain**
+  - Desain responsif (mobile-first) di seluruh halaman
+  - Integrasi Google Maps pada halaman kontak/profil sekolah
+  - Modal konfirmasi logout, favicon, dan branding logo sekolah
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+## 3. Alur Sistem
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+Secara garis besar, alur penggunaan sistem SPMB adalah sebagai berikut:
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌───────────────────┐
+│  1. Registrasi   │ --> │  2. Verifikasi   │ --> │  3. Pendaftaran &  │
+│  & Login (OTP)   │     │      OTP Email   │     │  Pengisian Berkas  │
+└─────────────────┘     └──────────────────┘     └───────────────────┘
+                                                            │
+                                                            v
+┌─────────────────┐     ┌──────────────────┐     ┌───────────────────┐
+│ 6. Daftar Ulang  │ <-- │  5. Pengumuman   │ <-- │ 4. Verifikasi      │
+│  (jika lulus)    │     │    Kelulusan     │     │  Berkas oleh Admin │
+└─────────────────┘     └──────────────────┘     │ TU & Proses Seleksi│
+        │                                        └───────────────────┘
+        v
+┌─────────────────┐     ┌──────────────────┐
+│ 7. Konversi ke   │ --> │ 8. Rekap & Ekspor│
+│   Buku Induk     │     │ Laporan (Kepsek) │
+└─────────────────┘     └──────────────────┘
+```
+
+Penjelasan tiap tahap:
+
+1. **Registrasi & Login** — Calon siswa membuat akun dan memverifikasi email melalui kode OTP.
+2. **Pendaftaran** — Calon siswa mengisi biodata, memilih jurusan (sesuai kuota tersedia), dan mengunggah berkas persyaratan.
+3. **Verifikasi Berkas** — Admin TU memeriksa kelengkapan dan keabsahan berkas yang diunggah.
+4. **Seleksi** — Admin TU menetapkan status kelulusan berdasarkan kriteria seleksi (`tetapkan`), kemudian mempublikasikannya (`publish`) ketika sudah final.
+5. **Pengumuman** — Calon siswa dapat melihat hasil kelulusan melalui akun masing-masing.
+6. **Daftar Ulang** — Calon siswa yang lulus melakukan konfirmasi daftar ulang beserta kelengkapan berkas tambahan.
+7. **Buku Induk** — Data siswa yang telah daftar ulang dikonversi otomatis menjadi entri Buku Induk dengan NIS yang digenerate sistem.
+8. **Laporan** — Admin TU dan Kepala Sekolah dapat memantau rekapitulasi serta mengunduh laporan (PDF/Excel) dari setiap tahapan.
+
+## 4. Teknologi yang Digunakan
+
+**Backend**
+- [CodeIgniter 4](https://codeigniter.com/) (PHP ^8.2) — framework utama
+- MySQL / MariaDB — basis data
+- [dompdf](https://github.com/dompdf/dompdf) — pembuatan dokumen PDF (bukti pendaftaran, laporan)
+- [PhpSpreadsheet](https://github.com/PHPOffice/PhpSpreadsheet) — ekspor laporan Excel
+
+**Frontend**
+- [Tailwind CSS](https://tailwindcss.com/) — utility-first styling
+- [Alpine.js](https://alpinejs.dev/) — interaktivitas ringan sisi klien
+
+**Infrastruktur & Tooling**
+- [Brevo SMTP](https://www.brevo.com/) — pengiriman email (OTP, notifikasi, reset password)
+- [Coolify](https://coolify.io/) — self-hosted PaaS untuk deployment
+- Docker — containerization (`DockerFile/Dockerfile`, `nixpacks.toml`)
+- Git & GitHub — version control (`fixronmaulana/ta-spmb`)
+- [PHPUnit](https://phpunit.de/) — automated testing (White Box Testing)
+- [Apache JMeter](https://jmeter.apache.org/) — pengujian performa (Load Testing & Stress Testing)
+
+## 5. Cara Menjalankan Proyek
+
+### Prasyarat
+
+- PHP >= 8.2 dengan ekstensi `intl`, `mbstring`, `json`, `mysqlnd`, `curl`
+- Composer
+- MySQL/MariaDB
+- Node.js (opsional, jika ingin build ulang aset Tailwind)
+
+### Langkah Instalasi
+
+1. **Clone repository**
+   ```bash
+   git clone https://github.com/fixronmaulana/ta-spmb.git
+   cd ta-spmb
+   ```
+
+2. **Install dependency PHP**
+   ```bash
+   composer install
+   ```
+
+3. **Konfigurasi environment**
+
+   Salin `.env.example` menjadi `.env`, lalu sesuaikan konfigurasi berikut:
+   ```bash
+   cp .env.example .env
+   ```
+   - `app.baseURL` — URL aplikasi (contoh: `http://localhost:8080/`)
+   - `database.default.*` — kredensial database (hostname, database, username, password, port)
+   - `session.*` — konfigurasi session (path, nama cookie, expiration)
+   - `email.*` — konfigurasi SMTP (Brevo) untuk fitur OTP dan notifikasi email
+
+4. **Buat database dan jalankan migrasi**
+   ```bash
+   php spark migrate
+   ```
+   Jalankan seeder jika tersedia data awal (master data jurusan, dsb):
+   ```bash
+   php spark db:seed NamaSeeder
+   ```
+
+5. **Jalankan server lokal**
+   ```bash
+   php spark serve
+   ```
+   Aplikasi dapat diakses melalui `http://localhost:8080`.
+
+6. **(Opsional) Jalankan pengujian**
+   ```bash
+   composer test
+   ```
+
+### Deployment
+
+Proyek ini di-deploy menggunakan **Coolify** yang terhubung langsung dengan repository GitHub `fixronmaulana/ta-spmb`, dengan database MariaDB yang berjalan pada VPS terpisah. Build image mengikuti konfigurasi pada `DockerFile/Dockerfile` dan `nixpacks.toml`.
+
+## 6. Pengembang
+
+| | |
+|---|---|
+| **Nama** | Fikron |
+| **Program Studi** | Sarjana Terapan Teknologi Rekayasa Perangkat Lunak |
+| **Institusi** | Politeknik Negeri Banyuwangi |
+| **Jenis Proyek** | Tugas Akhir (TA) |
+| **Metodologi** | Iterative Incremental |
+
+## 7. Struktur Proyek
+
+Struktur direktori utama mengikuti konvensi CodeIgniter 4 dengan modul-modul fungsional pada `app/Modules`:
+
+```
+app/
+├── Config/          # Konfigurasi aplikasi, routing, filter, dsb.
+├── Controllers/      # Controller bawaan CI4 (Home, BaseController)
+├── Modules/
+│   ├── Auth/          # Registrasi, login, OTP, reset password
+│   ├── Pendaftaran/   # Form pendaftaran, kuota jurusan, no. pendaftaran
+│   ├── Verifikasi/    # Verifikasi berkas oleh Admin TU
+│   ├── Seleksi/       # Penetapan & publikasi hasil seleksi
+│   ├── DaftarUlang/   # Konfirmasi & verifikasi daftar ulang
+│   ├── BukuInduk/     # Konversi data siswa ke Buku Induk + generate NIS
+│   ├── Dashboard/     # Dashboard tiap role
+│   ├── Laporan/       # Ekspor laporan PDF/Excel
+│   ├── MasterData/    # Data master (jurusan, periode, dsb.)
+│   └── Notifikasi/    # Notifikasi email
+├── Models/
+├── Views/
+├── Filters/           # Filter otorisasi & guard periode
+├── Helpers/
+├── Libraries/
+└── Validation/
+```
+
+Setiap modul umumnya berisi `Controllers/`, `Models/`, `Views/`, dan `Services/` (atau `Repositories/`) sendiri agar logic bisnis tetap terisolasi per domain.
+
+## 8. Pengujian
+
+Pengujian sistem dilakukan secara bertahap mengikuti tiap iterasi pengembangan:
+
+- **Black Box Testing** — pengujian fungsional berdasarkan skenario penggunaan tiap fitur
+- **White Box Testing** — pengujian unit dengan PHPUnit dan pengukuran branch coverage
+- **User Acceptance Test (UAT)** — kuesioner skala Likert per peran pengguna
+- **System Usability Scale (SUS)** — pengukuran usabilitas sistem
+- **Pengujian Performa (Apache JMeter)** — Load Testing dan Stress Testing untuk mengukur ketahanan sistem terhadap beban pengguna
+
+## 9. Lisensi
+
+Proyek ini menggunakan lisensi [MIT](LICENSE), mengikuti lisensi bawaan dari framework CodeIgniter 4 yang menjadi basis pengembangan.
