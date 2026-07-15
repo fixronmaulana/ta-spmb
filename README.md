@@ -131,7 +131,6 @@ Penjelasan tiap tahap:
 - [Coolify](https://coolify.io/) — self-hosted PaaS untuk deployment
 - Docker — containerization (`DockerFile/Dockerfile`, `nixpacks.toml`)
 - Git & GitHub — version control (`fixronmaulana/ta-spmb`)
-- [PHPUnit](https://phpunit.de/) — automated testing (White Box Testing)
 - [Apache JMeter](https://jmeter.apache.org/) — pengujian performa (Load Testing & Stress Testing)
 
 ## 5. Cara Menjalankan Proyek
@@ -235,7 +234,6 @@ Setiap modul umumnya berisi `Controllers/`, `Models/`, `Views/`, dan `Services/`
 Pengujian sistem dilakukan secara bertahap mengikuti tiap iterasi pengembangan:
 
 - **Black Box Testing** — pengujian fungsional berdasarkan skenario penggunaan tiap fitur
-- **White Box Testing** — pengujian unit dengan PHPUnit dan pengukuran branch coverage
 - **User Acceptance Test (UAT)** — kuesioner skala Likert per peran pengguna
 - **System Usability Scale (SUS)** — pengukuran usabilitas sistem
 - **Pengujian Performa (Apache JMeter)** — Load Testing dan Stress Testing untuk mengukur ketahanan sistem terhadap beban pengguna
